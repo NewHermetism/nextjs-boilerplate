@@ -35,6 +35,7 @@
     "start:devnet": "yarn run copy:devnet-config & vite dev",
     "start:testnet": "yarn run copy:testnet-config & vite dev",
     "start:mainnet": "yarn run copy:mainnet-config & vite dev",
+    "build": "vite build",
     "build:devnet": "yarn run copy:devnet-config & vite build",
     "build:testnet": "yarn run copy:testnet-config & vite build",
     "build:mainnet": "yarn run copy:mainnet-config & vite build",
