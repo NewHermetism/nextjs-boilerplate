@@ -87,6 +87,9 @@ class PlayScene extends Phaser.Scene {
   create() {
     const { height } = this.scale;
 
+    this.sound.pauseOnBlur = false;
+    this.sound.pauseOnHide = false;
+
     // Initialize background music
     this.backgroundMusic = this.sound.add('menu_music', {
       volume: 0.15,
@@ -180,7 +183,9 @@ class PlayScene extends Phaser.Scene {
     this.inputManager = new InputManager(
       this,
       () => {
-        if (!this.menu.visible) this.dinoCharacter.jump();
+        if (!this.menu.visible && this.isGameRunning) {
+          this.dinoCharacter.jump();
+        }
       },
       handleRestartMenu,
       () => this.uiManager.showMenu(),

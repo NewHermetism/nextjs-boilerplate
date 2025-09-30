@@ -2,6 +2,134 @@ import Phaser from 'phaser';
 import { GAME_SETTINGS, CHARACTER_CONFIG } from './Constants';
 import PlayScene from './PlayScene';
 
+type BodyAnchor = 'bottom' | 'center' | 'top';
+
+interface RectBodyConfig {
+  widthRatio: number;
+  heightRatio: number;
+  offsetXRatio?: number;
+  bottomPaddingRatio?: number;
+  offsetYRatio?: number;
+  anchor?: BodyAnchor;
+}
+
+interface ObstacleBodyConfig {
+  scale?: number;
+  flipX?: boolean;
+  body: RectBodyConfig;
+}
+
+const DEFAULT_OBSTACLE_BODY: ObstacleBodyConfig = {
+  body: {
+    widthRatio: 0.8,
+    heightRatio: 0.8,
+    offsetXRatio: 0.1,
+    anchor: 'bottom'
+  }
+};
+
+const OBSTACLE_BODY_CONFIG: Record<string, ObstacleBodyConfig> = {
+  'obsticle-small': {
+    scale: 1.8,
+    body: {
+      widthRatio: 0.8,
+      heightRatio: 0.55,
+      offsetXRatio: 0.1,
+      bottomPaddingRatio: 0.05,
+      anchor: 'bottom'
+    }
+  },
+  'obsticle-big': {
+    scale: 1.8,
+    body: {
+      widthRatio: 0.75,
+      heightRatio: 0.65,
+      offsetXRatio: 0.12,
+      bottomPaddingRatio: 0.05,
+      anchor: 'bottom'
+    }
+  },
+  'enemy-seringe': {
+    scale: 1.2,
+    body: {
+      widthRatio: 0.8,
+      heightRatio: 0.5,
+      offsetXRatio: 0.1,
+      offsetYRatio: 0.05,
+      anchor: 'center'
+    }
+  },
+  'enemy-lava': {
+    scale: 1.4,
+    body: {
+      widthRatio: 0.85,
+      heightRatio: 0.45,
+      offsetXRatio: 0.08,
+      bottomPaddingRatio: 0.02,
+      anchor: 'bottom'
+    }
+  },
+  'enemy-bone': {
+    scale: 1.3,
+    body: {
+      widthRatio: 0.65,
+      heightRatio: 0.65,
+      offsetXRatio: 0.17,
+      anchor: 'center'
+    }
+  },
+  'enemy-boss': {
+    scale: 1,
+    flipX: true,
+    body: {
+      widthRatio: 0.45,
+      heightRatio: 0.7,
+      offsetXRatio: 0.28,
+      anchor: 'bottom'
+    }
+  },
+  'enemy-white': {
+    scale: 1,
+    flipX: true,
+    body: {
+      widthRatio: 0.45,
+      heightRatio: 0.65,
+      offsetXRatio: 0.28,
+      anchor: 'bottom'
+    }
+  },
+  'enemy-blue': {
+    scale: 1,
+    flipX: true,
+    body: {
+      widthRatio: 0.5,
+      heightRatio: 0.65,
+      offsetXRatio: 0.25,
+      anchor: 'bottom'
+    }
+  },
+  'enemy-fireball': {
+    scale: 1.3,
+    body: {
+      widthRatio: 0.65,
+      heightRatio: 0.6,
+      offsetXRatio: 0.18,
+      offsetYRatio: 0.05,
+      anchor: 'center'
+    }
+  },
+  'enemy-toxic-waste': {
+    scale: 1.5,
+    body: {
+      widthRatio: 0.85,
+      heightRatio: 0.55,
+      offsetXRatio: 0.08,
+      bottomPaddingRatio: 0.05,
+      anchor: 'bottom'
+    }
+  }
+};
+
 export default class ObstacleManager {
   private scene: PlayScene;
   private obstacles: Phaser.Physics.Arcade.Group;
@@ -68,8 +196,6 @@ export default class ObstacleManager {
         width + distance,
         height - this.getObstacleYPosition(obstacleType)
       );
-
-      this.configureObstaclePhysics(obstacle, obstacleType);
       return obstacle;
     } catch (error) {
       console.error('Error placing obstacle:', error);
@@ -142,110 +268,47 @@ export default class ObstacleManager {
     obstacle: Phaser.Physics.Arcade.Sprite,
     type: string
   ) {
-    const config = this.getObstaclePhysicsConfig(type);
-    obstacle.setScale(config.scale);
+    const config = OBSTACLE_BODY_CONFIG[type] || DEFAULT_OBSTACLE_BODY;
 
-    if (config.flipX) {
-      obstacle.setFlipX(true);
+    obstacle.setScale(config.scale ?? 1);
+
+    if (typeof config.flipX === 'boolean') {
+      obstacle.setFlipX(config.flipX);
     }
 
-    if (obstacle.body) {
-      // Set circular hitbox
-      const radius = Math.min(config.width, config.height) / 2;
-      obstacle.body.setCircle(
-        radius,
-        config.width / 2 - radius + (config.offsetX || 0),
-        config.height / 2 - radius + (config.offsetY || 0)
-      );
+    const body = obstacle.body as Phaser.Physics.Arcade.Body | null;
+    if (!body) return;
+
+    const displayWidth = obstacle.displayWidth;
+    const displayHeight = obstacle.displayHeight;
+
+    const {
+      widthRatio,
+      heightRatio,
+      offsetXRatio = 0,
+      bottomPaddingRatio = 0,
+      offsetYRatio = 0,
+      anchor = 'bottom'
+    } = config.body;
+
+    const bodyWidth = displayWidth * widthRatio;
+    const bodyHeight = displayHeight * heightRatio;
+    const offsetX = displayWidth * offsetXRatio;
+
+    let offsetY = 0;
+
+    if (anchor === 'top') {
+      offsetY = displayHeight * offsetYRatio;
+    } else if (anchor === 'center') {
+      offsetY = displayHeight / 2 - bodyHeight / 2 + displayHeight * offsetYRatio;
+    } else {
+      // bottom anchor (default)
+      offsetY = displayHeight - bodyHeight - displayHeight * bottomPaddingRatio;
     }
-  }
 
-  private getObstaclePhysicsConfig(type: string) {
-    const configs: Record<string, any> = {
-      'obsticle-small': {
-        scale: 1.8,
-        width: 50,
-        height: 50,
-        offsetX: 0,
-        offsetY: 0
-      },
-      'obsticle-big': {
-        scale: 1.8,
-        width: 80,
-        height: 80,
-        offsetX: 0,
-        offsetY: 20
-      },
-      'enemy-seringe': {
-        scale: 1.2,
-        width: 40,
-        height: 30,
-        offsetX: 0,
-        offsetY: 0
-      },
-      'enemy-lava': {
-        scale: 1.4,
-        width: 60,
-        height: 20,
-        offsetX: 0,
-        offsetY: 0
-      },
-      'enemy-bone': {
-        scale: 1.3,
-        width: 35,
-        height: 35,
-        offsetX: 10,
-        offsetY: 10
-      },
-      'enemy-boss': {
-        scale: 1,
-        width: 84,
-        height: 85,
-        offsetX: 0,
-        offsetY: 0,
-        flipX: true
-      },
-      'enemy-white': {
-        scale: 1,
-        width: 40,
-        height: 80,
-        offsetX: 0,
-        offsetY: 0,
-        flipX: true
-      },
-      'enemy-blue': {
-        scale: 1,
-        width: 35,
-        height: 65,
-        offsetX: 0,
-        offsetY: 0,
-        flipX: true
-      },
-      'enemy-fireball': {
-        scale: 1.3,
-        width: 35,
-        height: 20,
-        offsetX: 20,
-        offsetY: 0
-      },
-      'enemy-toxic-waste': {
-        scale: 1.5,
-        width: 40,
-        height: 30,
-        offsetX: 0,
-        offsetY: 0
-      }
-    };
-
-    return (
-      configs[type] || {
-        scale: 1,
-        width: 50,
-        height: 50,
-        offsetX: 0,
-        offsetY: 0
-      }
-    );
+    body.setSize(bodyWidth, bodyHeight);
+    body.setOffset(offsetX, offsetY);
+    body.setAllowGravity(false);
   }
 
   private getWeightedRandomObstacle(

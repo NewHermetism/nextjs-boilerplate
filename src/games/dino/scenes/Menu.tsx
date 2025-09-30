@@ -12,7 +12,10 @@ class Menu extends Phaser.GameObjects.Container {
   private onAvatarSelect: () => void;
   private onLeaderBoardSelect: () => void;
   private onPlaySelect: () => void;
-  private isMusicOn: boolean = true;
+  private updateMusicIcon() {
+    const isMuted = this.scene.sound.mute;
+    this.musicButton.setTexture(isMuted ? 'music_off' : 'music_on');
+  }
 
   constructor(
     scene: Phaser.Scene,
@@ -90,6 +93,7 @@ class Menu extends Phaser.GameObjects.Container {
     ]);
 
     this.handleInputs();
+    this.updateMusicIcon();
     this.setDepth(2);
     // Add items
     scene.add.existing(this);
@@ -97,6 +101,7 @@ class Menu extends Phaser.GameObjects.Container {
 
   show() {
     this.setVisible(true);
+    this.updateMusicIcon();
   }
 
   hide() {
@@ -133,16 +138,9 @@ class Menu extends Phaser.GameObjects.Container {
   }
 
   private toggleMusic() {
-    this.isMusicOn = !this.isMusicOn;
-    const scene = this.scene as Phaser.Scene;
-
-    if (this.isMusicOn) {
-      this.musicButton.setTexture('music_on');
-      scene.sound.resumeAll();
-    } else {
-      this.musicButton.setTexture('music_off');
-      scene.sound.pauseAll();
-    }
+    const shouldMute = !this.scene.sound.mute;
+    this.scene.sound.setMute(shouldMute);
+    this.updateMusicIcon();
   }
 }
 export default Menu;
