@@ -24,6 +24,9 @@ class PlayScene extends Phaser.Scene {
   private hitSound!: Phaser.Sound.BaseSound;
   private startTrigger!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private backgroundMusic!: Phaser.Sound.BaseSound;
+  private handleMuteChange = (isMuted: boolean) => {
+    this.applyGlobalMute(isMuted);
+  };
 
   // Managers
   private dinoCharacter!: DinoCharacter;
@@ -57,14 +60,7 @@ class PlayScene extends Phaser.Scene {
           ? 'boss_music'
           : 'blue_music';
 
-      if (this.backgroundMusic) {
-        this.backgroundMusic.stop();
-      }
-      this.backgroundMusic = this.sound.add(musicKey, {
-        volume: 0.15,
-        loop: true
-      });
-      this.backgroundMusic.play();
+      this.startBackgroundMusic(musicKey);
     }
 
     return Boolean(canUpdateScene);
@@ -91,17 +87,16 @@ class PlayScene extends Phaser.Scene {
     this.sound.pauseOnHide = false;
 
     // Initialize background music
-    this.backgroundMusic = this.sound.add('menu_music', {
-      volume: 0.15,
-      loop: true
-    });
-    this.backgroundMusic.play();
+    const initialMute = this.getInitialMuteState();
+    this.applyGlobalMute(initialMute);
+    this.startBackgroundMusic('menu_music');
 
     // Setup device orientation check
     this.setupOrientationCheck();
 
     // Load sounds
     this.hitSound = this.sound.add('hit', SOUND_CONFIG.HIT);
+    this.applyGlobalMute(this.sound.mute);
 
     // Create start trigger
     this.startTrigger = this.physics.add
@@ -178,6 +173,7 @@ class PlayScene extends Phaser.Scene {
     this.obstacleManager = new ObstacleManager(this);
     this.uiManager = new UIManager(this, this.characterModal, this.menu);
     this.scoreManager = new ScoreManager(this);
+    this.applyGlobalMute(this.sound.mute);
 
     // Initialize input manager with callbacks
     this.inputManager = new InputManager(
@@ -204,6 +200,37 @@ class PlayScene extends Phaser.Scene {
 
     // Initialize start trigger
     this.initStartTrigger();
+
+    this.game.events.on('audio:mute-changed', this.handleMuteChange, this);
+  }
+
+  private getInitialMuteState() {
+    const stored = this.registry.get('audioMuted');
+    if (typeof stored === 'boolean') {
+      return stored;
+    }
+    return this.sound.mute;
+  }
+
+  private applyGlobalMute(isMuted: boolean) {
+    this.sound.setMute(isMuted);
+    this.sound.volume = isMuted ? 0 : 1;
+    this.sound.sounds.forEach((sound) => sound.setMute(isMuted));
+  }
+
+  private startBackgroundMusic(key: string) {
+    if (this.backgroundMusic) {
+      this.backgroundMusic.stop();
+      this.backgroundMusic.destroy();
+    }
+
+    this.backgroundMusic = this.sound.add(key, {
+      volume: 0.15,
+      loop: true
+    });
+
+    this.applyGlobalMute(this.sound.mute);
+    this.backgroundMusic.play();
   }
 
   setupOrientationCheck() {
@@ -325,12 +352,7 @@ class PlayScene extends Phaser.Scene {
     this.isGameRunning = false;
     this.anims.pauseAll();
     this.gameSpeed = GAME_SETTINGS.INITIAL_GAME_SPEED;
-    this.backgroundMusic.stop();
-    this.backgroundMusic = this.sound.add('menu_music', {
-      volume: 0.15,
-      loop: true
-    });
-    this.backgroundMusic.play();
+    this.startBackgroundMusic('menu_music');
   }
 
   restartGame() {
@@ -352,12 +374,7 @@ class PlayScene extends Phaser.Scene {
         ? 'boss_music'
         : 'blue_music';
 
-    this.backgroundMusic.stop();
-    this.backgroundMusic = this.sound.add(musicKey, {
-      volume: 0.15,
-      loop: true
-    });
-    this.backgroundMusic.play();
+    this.startBackgroundMusic(musicKey);
   }
 
   update(time: number, delta: number): void {
@@ -379,6 +396,7 @@ class PlayScene extends Phaser.Scene {
     if (this.updateVisibility) {
       window.removeEventListener('resize', this.updateVisibility);
     }
+    this.game.events.off('audio:mute-changed', this.handleMuteChange, this);
     this.events.off('characterChanged');
   }
 }
