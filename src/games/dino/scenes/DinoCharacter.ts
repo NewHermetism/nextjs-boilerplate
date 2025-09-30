@@ -24,6 +24,7 @@ export default class DinoCharacter {
       .setOffset(0, this.onGroundPosition);
 
     this.jumpSound = this.scene.sound.add('jump', SOUND_CONFIG.JUMP);
+    this.jumpSound.setMute(this.scene.sound.mute);
 
     this.initAnims();
     this.updateCharacter();

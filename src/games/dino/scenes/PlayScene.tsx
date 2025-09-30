@@ -23,7 +23,8 @@ class PlayScene extends Phaser.Scene {
   private isGameRunning: boolean;
   private hitSound!: Phaser.Sound.BaseSound;
   private startTrigger!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
-  private backgroundMusic!: Phaser.Sound.BaseSound;
+  private backgroundMusic?: Phaser.Sound.BaseSound;
+  private isAudioMuted = false;
   private handleMuteChange = (isMuted: boolean) => {
     this.applyGlobalMute(isMuted);
   };
@@ -96,7 +97,7 @@ class PlayScene extends Phaser.Scene {
 
     // Load sounds
     this.hitSound = this.sound.add('hit', SOUND_CONFIG.HIT);
-    this.applyGlobalMute(this.sound.mute);
+    this.hitSound.setMute(this.isAudioMuted);
 
     // Create start trigger
     this.startTrigger = this.physics.add
@@ -173,7 +174,6 @@ class PlayScene extends Phaser.Scene {
     this.obstacleManager = new ObstacleManager(this);
     this.uiManager = new UIManager(this, this.characterModal, this.menu);
     this.scoreManager = new ScoreManager(this);
-    this.applyGlobalMute(this.sound.mute);
 
     // Initialize input manager with callbacks
     this.inputManager = new InputManager(
@@ -213,24 +213,62 @@ class PlayScene extends Phaser.Scene {
   }
 
   private applyGlobalMute(isMuted: boolean) {
+    this.isAudioMuted = isMuted;
     this.sound.setMute(isMuted);
-    this.sound.volume = isMuted ? 0 : 1;
-    this.sound.sounds.forEach((sound) => sound.setMute(isMuted));
+    this.sound.sounds.forEach((sound) => {
+      if (sound === this.backgroundMusic) {
+        if (isMuted && sound.isPlaying) {
+          sound.pause();
+          sound.setMute(true);
+        }
+        if (!isMuted && sound.isPaused) {
+          sound.setMute(false);
+          sound.resume();
+        } else if (!isMuted) {
+          sound.setMute(false);
+        }
+        return;
+      }
+
+      sound.setMute(isMuted);
+    });
+
+    if (!isMuted && this.backgroundMusic && !this.backgroundMusic.isPlaying) {
+      this.backgroundMusic.play();
+    }
   }
 
   private startBackgroundMusic(key: string) {
-    if (this.backgroundMusic) {
+    const shouldReuse = this.backgroundMusic?.key === key;
+
+    if (!shouldReuse && this.backgroundMusic) {
       this.backgroundMusic.stop();
       this.backgroundMusic.destroy();
+      this.backgroundMusic = undefined;
     }
 
-    this.backgroundMusic = this.sound.add(key, {
-      volume: 0.15,
-      loop: true
-    });
+    if (!this.backgroundMusic || !shouldReuse) {
+      this.backgroundMusic = this.sound.add(key, {
+        volume: 0.15,
+        loop: true
+      });
+      this.backgroundMusic.setMute(this.isAudioMuted);
+    }
 
-    this.applyGlobalMute(this.sound.mute);
-    this.backgroundMusic.play();
+    if (!this.backgroundMusic) return;
+
+    if (this.backgroundMusic.isPaused) {
+      this.backgroundMusic.resume();
+    } else {
+      const seekPosition = shouldReuse ? this.backgroundMusic.seek ?? 0 : 0;
+      this.backgroundMusic.stop();
+      this.backgroundMusic.play({ seek: seekPosition });
+    }
+
+    if (this.isAudioMuted) {
+      this.backgroundMusic.pause();
+      this.backgroundMusic.setMute(true);
+    }
   }
 
   setupOrientationCheck() {
@@ -342,7 +380,7 @@ class PlayScene extends Phaser.Scene {
     this.uiManager.showGameOver();
     this.hitSound.play();
     this.cameras.main.shake(100, 0.01);
-    this.backgroundMusic.stop();
+    this.backgroundMusic?.stop();
   }
 
   private handleBackButton() {
