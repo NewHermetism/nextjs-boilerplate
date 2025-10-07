@@ -40,14 +40,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const socket = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const disableAuth = import.meta.env.VITE_DISABLE_AUTH === 'true';
 
   useEffect(() => {
-    // TEMP: offline stub mode, mark as connected and skip real socket
-    if (disableAuth) {
-      setIsConnected(true);
-      return;
-    }
     // Initialize socket connection
     socket.current = io(SOCKET_API_URL, {
       transports: ['websocket'],
@@ -94,15 +88,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const getProfile = (accessToken: string): Promise<any> => {
-    // TEMP: offline dev: return stubbed profile
-    if (disableAuth) {
-      return Promise.resolve({
-        selected_character: 1,
-        has_white_pijama_nft: true,
-        has_boss_nft: true,
-        has_blue_victor_nft: true
-      });
-    }
     return new Promise<boolean>((resolve, reject) => {
       if (!socket.current) {
         reject(new Error('Socket not connected'));

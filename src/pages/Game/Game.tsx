@@ -17,9 +17,6 @@ export const Game = () => {
   const isLeaderboardOpenRef = useRef(isLeaderboardOpen);
 
   const { tokenLogin } = useGetLoginInfo();
-  // TEMP DEV FLAG: set VITE_DISABLE_AUTH=true to allow starting the game
-  // without MultiversX login. Remove/disable for production.
-  const disableAuth = import.meta.env.VITE_DISABLE_AUTH === 'true';
 
   useEffect(() => {
     isLeaderboardOpenRef.current = isLeaderboardOpen;
@@ -30,7 +27,7 @@ export const Game = () => {
   }, [isMobile, isTablet, isLandscape]);
 
   useEffect(() => {
-    if (disableAuth || tokenLogin?.nativeAuthToken) {
+    if (tokenLogin?.nativeAuthToken) {
       const config = {
         type: Phaser.AUTO,
         width: '900',
@@ -53,9 +50,7 @@ export const Game = () => {
       gameRef.current.scene.add(
         'PlayScene',
         new PlayScene(
-          // When auth is disabled, pass a dummy token to the scene.
-          // Consider stubbing socket calls if backend rejects this.
-          (tokenLogin?.nativeAuthToken as string) || 'dev',
+          tokenLogin?.nativeAuthToken,
           () => setIsLeaderboardOpen(true),
           () => isLeaderboardOpenRef.current
         )
@@ -67,11 +62,10 @@ export const Game = () => {
         gameRef.current = null;
       }
     };
-  }, [disableAuth, tokenLogin?.nativeAuthToken]);
+  }, [tokenLogin?.nativeAuthToken]);
 
-  const { leaderboard, loading } = useGetLeaderboard({
-    fetchProps: [isLeaderboardOpen],
-    shouldFetch: isLeaderboardOpen
+  const { leaderboard } = useGetLeaderboard({
+    fetchProps: [isLeaderboardOpen]
   });
 
   return (
@@ -82,7 +76,6 @@ export const Game = () => {
           isOpen={isLeaderboardOpen}
           onClose={() => setIsLeaderboardOpen(false)}
           leaderboard={leaderboard}
-          loading={loading}
         />
         <div
           id='phaser-game'

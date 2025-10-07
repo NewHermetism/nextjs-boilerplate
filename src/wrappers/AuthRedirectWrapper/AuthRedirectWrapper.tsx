@@ -11,15 +11,6 @@ export const AuthRedirectWrapper = ({
   children,
   requireAuth = true
 }: AuthRedirectWrapperPropsType) => {
-  // TEMP DEV FLAG: set VITE_DISABLE_AUTH=true to bypass auth redirects
-  // Remove or set to false for production deployments
-  const disableAuth = import.meta.env.VITE_DISABLE_AUTH === 'true';
-
-  // In dev mode with auth disabled, skip redirects entirely
-  if (disableAuth) {
-    return <>{children}</>;
-  }
-
   const isLoggedIn = useGetIsLoggedIn();
   const navigate = useNavigate();
 

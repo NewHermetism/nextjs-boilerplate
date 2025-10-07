@@ -12,25 +12,7 @@ class Menu extends Phaser.GameObjects.Container {
   private onAvatarSelect: () => void;
   private onLeaderBoardSelect: () => void;
   private onPlaySelect: () => void;
-
-  private getIsMuted() {
-    const stored = this.scene.game.registry.get('audioMuted');
-    if (typeof stored === 'boolean') {
-      return stored;
-    }
-    return this.scene.sound.mute;
-  }
-
-  private syncSoundManager(isMuted: boolean) {
-    this.scene.sound.setMute(isMuted);
-    this.scene.sound.volume = isMuted ? 0 : 1;
-    this.scene.sound.sounds.forEach((sound) => sound.setMute(isMuted));
-  }
-
-  private updateMusicIcon() {
-    const isMuted = this.getIsMuted();
-    this.musicButton.setTexture(isMuted ? 'music_off' : 'music_on');
-  }
+  private isMusicOn: boolean = true;
 
   constructor(
     scene: Phaser.Scene,
@@ -108,8 +90,6 @@ class Menu extends Phaser.GameObjects.Container {
     ]);
 
     this.handleInputs();
-    this.syncSoundManager(this.getIsMuted());
-    this.updateMusicIcon();
     this.setDepth(2);
     // Add items
     scene.add.existing(this);
@@ -117,7 +97,6 @@ class Menu extends Phaser.GameObjects.Container {
 
   show() {
     this.setVisible(true);
-    this.updateMusicIcon();
   }
 
   hide() {
@@ -154,11 +133,16 @@ class Menu extends Phaser.GameObjects.Container {
   }
 
   private toggleMusic() {
-    const shouldMute = !this.getIsMuted();
-    this.syncSoundManager(shouldMute);
-    this.scene.game.registry.set('audioMuted', shouldMute);
-    this.scene.game.events.emit('audio:mute-changed', shouldMute);
-    this.updateMusicIcon();
+    this.isMusicOn = !this.isMusicOn;
+    const scene = this.scene as Phaser.Scene;
+
+    if (this.isMusicOn) {
+      this.musicButton.setTexture('music_on');
+      scene.sound.resumeAll();
+    } else {
+      this.musicButton.setTexture('music_off');
+      scene.sound.pauseAll();
+    }
   }
 }
 export default Menu;

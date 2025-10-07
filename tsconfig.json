@@ -21,34 +21,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "baseUrl": "src",
-    "paths": {
-      "assets/*": ["assets/*"],
-      "components": ["components/index.ts"],
-      "components/*": ["components/*"],
-      "config": ["config/index.ts"],
-      "config/*": ["config/*"],
-      "games/*": ["games/*"],
-      "helpers": ["helpers/index.ts"],
-      "helpers/*": ["helpers/*"],
-      "hooks": ["hooks/index.ts"],
-      "hooks/*": ["hooks/*"],
-      "localConstants": ["localConstants/index.ts"],
-      "localConstants/*": ["localConstants/*"],
-      "pages": ["pages/index.ts"],
-      "pages/*": ["pages/*"],
-      "routes": ["routes/index.ts"],
-      "routes/*": ["routes/*"],
-      "services": ["services/index.ts"],
-      "services/*": ["services/*"],
-      "styles/*": ["styles/*"],
-      "types": ["types/index.ts"],
-      "types/*": ["types/*"],
-      "utils": ["utils/index.ts"],
-      "utils/*": ["utils/*"],
-      "wrappers": ["wrappers/index.ts"],
-      "wrappers/*": ["wrappers/*"]
-    }
+    "baseUrl": "src"
   },
   "include": ["src"]
 }

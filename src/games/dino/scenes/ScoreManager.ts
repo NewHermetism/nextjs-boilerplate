@@ -39,7 +39,6 @@ export default class ScoreManager {
 
     // Load sound
     this.reachSound = this.scene.sound.add('reach', SOUND_CONFIG.REACH);
-    this.reachSound.setMute(this.scene.sound.mute);
   }
 
   get currentScore() {
