@@ -8,14 +8,6 @@
       }
     }
   ],
-  "build": {
-    "env": {
-      "VITE_DISABLE_AUTH": "true"
-    }
-  },
-  "env": {
-    "VITE_DISABLE_AUTH": "true"
-  },
   "rewrites": [
     { "source": "/game", "destination": "/game" },
     { "source": "/(.*)", "destination": "/" }
