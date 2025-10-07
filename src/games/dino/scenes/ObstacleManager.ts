@@ -72,9 +72,9 @@ const OBSTACLE_BODY_CONFIG: Record<string, ObstacleBodyConfig> = {
   'enemy-bone': {
     scale: 1.3,
     body: {
-      widthRatio: 0.65,
-      heightRatio: 0.65,
-      offsetXRatio: 0.17,
+      widthRatio: 0.48,
+      heightRatio: 0.48,
+      offsetXRatio: 0.26,
       anchor: 'center'
     }
   },
@@ -111,10 +111,10 @@ const OBSTACLE_BODY_CONFIG: Record<string, ObstacleBodyConfig> = {
   'enemy-fireball': {
     scale: 1.3,
     body: {
-      widthRatio: 0.65,
-      heightRatio: 0.6,
-      offsetXRatio: 0.18,
-      offsetYRatio: 0.05,
+      widthRatio: 0.42,
+      heightRatio: 0.38,
+      offsetXRatio: 0.29,
+      offsetYRatio: 0.02,
       anchor: 'center'
     }
   },
