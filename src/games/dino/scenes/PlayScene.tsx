@@ -119,10 +119,20 @@ class PlayScene extends Phaser.Scene {
       if (!this.checkLeadearboardVisibility()) {
         const lockedIndexes: number[] = [];
         if (this.profile) {
+          console.log('📊 Profile NFT ownership:', {
+            white_pijama: this.profile.has_white_pijama_nft,
+            boss: this.profile.has_boss_nft,
+            blue_victor: this.profile.has_blue_victor_nft
+          });
           if (!this.profile.has_white_pijama_nft) lockedIndexes.push(0);
           if (!this.profile.has_boss_nft) lockedIndexes.push(1);
           if (!this.profile.has_blue_victor_nft) lockedIndexes.push(2);
+        } else {
+          console.warn('⚠️ Profile is undefined! Backend may not have responded.');
+          // Lock all characters if no profile (backend issue)
+          lockedIndexes.push(0, 1, 2);
         }
+        console.log('🔒 Locked character indexes:', lockedIndexes);
         this.characterModal.setLockedCharacters(lockedIndexes);
         this.characterModal.show();
       }
@@ -136,15 +146,24 @@ class PlayScene extends Phaser.Scene {
 
     const handlePlayMenu = () => {
       if (!this.characterModal.visible && !this.checkLeadearboardVisibility()) {
-        if (
-          this.profile?.has_white_pijama_nft ||
-          this.profile?.has_boss_nft ||
-          this.profile?.has_blue_victor_nft
-        ) {
+        if (!this.profile) {
+          console.warn('⚠️ Cannot play: Profile not loaded yet. Showing character modal...');
+          handleShowAvatarModal();
+          return;
+        }
+
+        const hasAnyNFT =
+          this.profile.has_white_pijama_nft ||
+          this.profile.has_boss_nft ||
+          this.profile.has_blue_victor_nft;
+
+        if (hasAnyNFT) {
+          console.log('✅ User has NFT, starting game...');
           this.menu.hide();
           this.SocketHandler.startGameEvent();
           this.restartGame();
         } else {
+          console.log('❌ User has no NFTs, showing character modal to purchase...');
           handleShowAvatarModal();
         }
       }

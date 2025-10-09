@@ -49,14 +49,17 @@ export default class SocketHandler {
     });
 
     this.socket.on('getVDashProfile', (profile: VdashProfile) => {
+      console.log('✅ Received profile from backend:', profile);
       this.scene.profile = profile;
       if (!this.scene.handleSetCharacterSelect(profile.selected_character)) {
+        console.log('⚠️ Failed to set character, retrying getProfile...');
         this.getProfile();
       }
     });
   }
 
   getProfile = () => {
+    console.log('🔄 Requesting profile from backend...');
     this.socket.emit('getVDashProfile', {
       accessToken: this.accessToken
     });

@@ -74,9 +74,12 @@ class CharacterModal extends Phaser.GameObjects.Container {
         'https://xoxno.com/collection/VICBITS-da9df7' // index 2
       ];
       char.on('pointerdown', () => {
+        // Check lockedIndexes dynamically (not closure) to get current state
         if (this.lockedIndexes.includes(index)) {
+          console.log(`Character ${index} is locked, opening marketplace:`, buyLinks[index]);
           window.open(buyLinks[index], '_blank');
         } else {
+          console.log(`Character ${index} is unlocked, selecting...`);
           this.selectCharacter(index);
         }
       });
