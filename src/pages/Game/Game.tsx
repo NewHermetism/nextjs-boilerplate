@@ -18,6 +18,15 @@ export const Game = () => {
 
   const { tokenLogin } = useGetLoginInfo();
 
+  // Debug: Log authentication state
+  useEffect(() => {
+    console.log('🔐 Game.tsx - Authentication State:', {
+      hasToken: !!tokenLogin?.nativeAuthToken,
+      tokenLength: tokenLogin?.nativeAuthToken?.length || 0,
+      isLoggedIn: !!tokenLogin
+    });
+  }, [tokenLogin]);
+
   useEffect(() => {
     isLeaderboardOpenRef.current = isLeaderboardOpen;
   }, [isLeaderboardOpen]);
@@ -28,6 +37,7 @@ export const Game = () => {
 
   useEffect(() => {
     if (tokenLogin?.nativeAuthToken) {
+      console.log('🎮 Game.tsx - Initializing Phaser game with token');
       const config = {
         type: Phaser.AUTO,
         width: '900',
@@ -55,9 +65,13 @@ export const Game = () => {
           () => isLeaderboardOpenRef.current
         )
       );
+      console.log('✅ Game.tsx - Phaser game initialized successfully');
+    } else {
+      console.warn('⚠️ Game.tsx - No authentication token available');
     }
     return () => {
       if (gameRef.current) {
+        console.log('🧹 Game.tsx - Cleaning up Phaser game');
         gameRef.current.destroy(true);
         gameRef.current = null;
       }

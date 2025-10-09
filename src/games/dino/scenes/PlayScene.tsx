@@ -77,15 +77,34 @@ class PlayScene extends Phaser.Scene {
     checkLeadearboardVisibility: () => boolean
   ) {
     super('PlayScene');
+    console.log('🎬 PlayScene: Constructor called');
+    console.log('🔐 PlayScene: Access Token Info:', {
+      hasToken: !!accessToken,
+      tokenLength: accessToken?.length || 0,
+      tokenPreview: accessToken ? `${accessToken.substring(0, 20)}...` : 'N/A'
+    });
+
     this.gameSpeed = GAME_SETTINGS.INITIAL_GAME_SPEED;
     this.isGameRunning = false;
     this.showLeaderBoard = showLeaderBoard;
     this.checkLeadearboardVisibility = checkLeadearboardVisibility;
+
+    console.log('🔌 PlayScene: Initializing SocketHandler...');
     this.SocketHandler = new SocketHandler({ accessToken, scene: this });
+
+    console.log('📞 PlayScene: Requesting profile from backend...');
     this.SocketHandler.getProfile();
   }
 
   create() {
+    console.log('🏗️ PlayScene: create() method called');
+    console.log('📊 PlayScene: Current state:', {
+      hasProfile: !!this.profile,
+      profileData: this.profile,
+      gameSpeed: this.gameSpeed,
+      isGameRunning: this.isGameRunning
+    });
+
     const { height } = this.scale;
 
     // Initialize background music

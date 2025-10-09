@@ -28,20 +28,26 @@ export default class SocketHandler {
     });
 
     this.socket.on('connect', () => {
-      console.log('Game: Connected to server');
-      console.log('Player ID:', this.socket?.id);
+      console.log('🔌 SocketHandler: Connected to server');
+      console.log('🆔 Player ID:', this.socket?.id);
+      console.log('🌐 Socket API URL:', SOCKET_API_URL);
     });
 
     this.socket.on('disconnect', () => {
-      console.log('Game: Disconnected from server');
+      console.warn('⚠️ SocketHandler: Disconnected from server');
     });
 
     this.socket.on('error', (error) => {
-      console.error('Game: Socket error:', error);
+      console.error('❌ SocketHandler: Socket error:', error);
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('Game: Connection error:', error);
+      console.error('❌ SocketHandler: Connection error:', error);
+      console.error('Details:', {
+        message: error.message,
+        type: error.type,
+        description: error.description
+      });
     });
 
     this.socket.on('sendVDashStartGame', ({ id }: { id: string }) => {
@@ -71,10 +77,32 @@ export default class SocketHandler {
   }
 
   getProfile = () => {
-    console.log('🔄 Requesting profile from backend...');
+    console.log('🔄 SocketHandler: Requesting profile from backend...');
+    console.log('📤 Emitting getVDashProfile event with:', {
+      hasAccessToken: !!this.accessToken,
+      tokenLength: this.accessToken?.length || 0,
+      socketConnected: this.socket.connected,
+      socketId: this.socket.id
+    });
+
+    if (!this.socket.connected) {
+      console.error('❌ Socket is not connected! Cannot request profile.');
+      // Try to reconnect
+      console.log('🔄 Attempting to reconnect socket...');
+      this.socket.connect();
+    }
+
     this.socket.emit('getVDashProfile', {
       accessToken: this.accessToken
     });
+
+    // Set a timeout to warn if profile doesn't arrive
+    setTimeout(() => {
+      if (!this.scene.profile) {
+        console.error('⏱️ TIMEOUT: Profile not received after 5 seconds!');
+        console.error('Check backend server status and socket connection.');
+      }
+    }, 5000);
   };
 
   setVDashSelectedCharacter = (selected_character: AvatarEnum) => {
