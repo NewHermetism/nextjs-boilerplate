@@ -24,6 +24,9 @@ class PlayScene extends Phaser.Scene {
   private startTrigger!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private backgroundMusic!: Phaser.Sound.BaseSound;
 
+  // Debug UI
+  private debugText?: Phaser.GameObjects.Text;
+
   // Managers
   private dinoCharacter!: DinoCharacter;
   private obstacleManager!: ObstacleManager;
@@ -69,7 +72,7 @@ class PlayScene extends Phaser.Scene {
   };
 
   constructor(
-    accessToken: string,
+    private accessToken: string,
     showLeaderBoard: () => void,
     checkLeadearboardVisibility: () => boolean
   ) {
@@ -216,6 +219,58 @@ class PlayScene extends Phaser.Scene {
 
     // Initialize start trigger
     this.initStartTrigger();
+
+    // Initialize debug UI
+    this.initDebugUI();
+  }
+
+  initDebugUI() {
+    const { width } = this.scale;
+
+    // Create debug text in top-right corner
+    this.debugText = this.add
+      .text(width - 10, 10, '', {
+        fontSize: '12px',
+        color: '#00ff00',
+        backgroundColor: '#000000',
+        padding: { x: 5, y: 5 },
+        fontFamily: 'monospace'
+      })
+      .setOrigin(1, 0)
+      .setDepth(1000)
+      .setScrollFactor(0);
+
+    this.updateDebugUI();
+  }
+
+  updateDebugUI() {
+    if (!this.debugText) return;
+
+    // Decode JWT to get wallet address
+    let walletAddress = 'Loading...';
+    try {
+      if (this.accessToken) {
+        const parts = this.accessToken.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1]));
+          walletAddress = payload.address || payload.sub || 'Unknown';
+        }
+      }
+    } catch (e) {
+      walletAddress = 'Error parsing token';
+    }
+
+    const debugInfo = [
+      '🔐 DEBUG INFO',
+      `Wallet: ${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 6)}`,
+      `Profile loaded: ${this.profile ? 'YES' : 'NO'}`,
+      this.profile ? `White Pijama NFT: ${this.profile.has_white_pijama_nft ? '✅' : '❌'}` : '',
+      this.profile ? `Boss NFT: ${this.profile.has_boss_nft ? '✅' : '❌'}` : '',
+      this.profile ? `Blue Victor NFT: ${this.profile.has_blue_victor_nft ? '✅' : '❌'}` : '',
+      this.profile ? `Selected: Character ${this.profile.selected_character}` : ''
+    ].filter(Boolean).join('\n');
+
+    this.debugText.setText(debugInfo);
   }
 
   setupOrientationCheck() {

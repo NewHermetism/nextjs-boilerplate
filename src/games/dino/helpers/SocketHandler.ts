@@ -50,7 +50,19 @@ export default class SocketHandler {
 
     this.socket.on('getVDashProfile', (profile: VdashProfile) => {
       console.log('✅ Received profile from backend:', profile);
+      console.log('🎮 NFT Ownership Details:', {
+        'White Pijama (Character 0)': profile.has_white_pijama_nft ? '✅ OWNED' : '❌ NOT OWNED',
+        'Boss (Character 1)': profile.has_boss_nft ? '✅ OWNED' : '❌ NOT OWNED',
+        'Blue Victor (Character 2)': profile.has_blue_victor_nft ? '✅ OWNED' : '❌ NOT OWNED',
+        'Selected Character': profile.selected_character
+      });
       this.scene.profile = profile;
+
+      // Update debug UI
+      if (this.scene.updateDebugUI) {
+        this.scene.updateDebugUI();
+      }
+
       if (!this.scene.handleSetCharacterSelect(profile.selected_character)) {
         console.log('⚠️ Failed to set character, retrying getProfile...');
         this.getProfile();
