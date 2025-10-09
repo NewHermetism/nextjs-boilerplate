@@ -16,8 +16,12 @@ export const AuthRedirectWrapper = ({
 
   useEffect(() => {
     if (isLoggedIn && !requireAuth) {
-      navigate(RouteNamesEnum.home);
-
+      // If user is logged in and on the unlock page, redirect to game
+      // Allow logged-in users to stay on other non-auth pages like home
+      const currentPath = window.location.pathname;
+      if (currentPath === RouteNamesEnum.unlock) {
+        navigate(RouteNamesEnum.game);
+      }
       return;
     }
 

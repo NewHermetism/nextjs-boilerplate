@@ -41,18 +41,18 @@ export const Unlock = () => {
   const { isMobile } = useIsMobile();
 
   const [onInitiateLogin, { isLoading }] = useIframeLogin({
-    callbackRoute: RouteNamesEnum.home,
+    callbackRoute: RouteNamesEnum.game,
     nativeAuth,
     onLoginRedirect: () => {
-      navigate(RouteNamesEnum.home);
+      navigate(RouteNamesEnum.game);
     }
   });
 
   const commonProps: CommonPropsType = {
-    callbackRoute: RouteNamesEnum.home,
+    callbackRoute: RouteNamesEnum.game,
     nativeAuth,
     onLoginRedirect: () => {
-      navigate(RouteNamesEnum.home);
+      navigate(RouteNamesEnum.game);
     },
     disabled: isLoading
   };
