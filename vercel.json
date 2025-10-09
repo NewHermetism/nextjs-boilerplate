@@ -1,8 +1,4 @@
 {
-    "framework": "vite",
-    "buildCommand": "yarn build:mainnet",
-    "outputDirectory": "build",
-    "installCommand": "yarn install",
     "rewrites": [
       { "source": "/game", "destination": "/game" },
       { "source": "/(.*)", "destination": "/" }
