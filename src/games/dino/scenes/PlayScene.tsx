@@ -16,6 +16,7 @@ import { VdashProfile } from '../vdash-utils/types/vdash/profile';
 class PlayScene extends Phaser.Scene {
   public SocketHandler: SocketHandler;
   public profile?: VdashProfile;
+  public profileLoadError: boolean = false;
   public gameId?: string;
 
   public gameSpeed: number;
@@ -150,8 +151,13 @@ class PlayScene extends Phaser.Scene {
           if (!this.profile.has_boss_nft) lockedIndexes.push(1);
           if (!this.profile.has_blue_victor_nft) lockedIndexes.push(2);
         } else {
-          console.warn('⚠️ Profile is undefined! Backend may not have responded.');
-          // Lock all characters if no profile (backend issue)
+          if (this.profileLoadError) {
+            console.error('❌ Cannot show characters: Backend connection failed!');
+            console.error('The backend server is not responding. Please try again later.');
+          } else {
+            console.warn('⚠️ Profile is still loading... Please wait.');
+          }
+          // Lock all characters if no profile
           lockedIndexes.push(0, 1, 2);
         }
         console.log('🔒 Locked character indexes:', lockedIndexes);
@@ -169,7 +175,13 @@ class PlayScene extends Phaser.Scene {
     const handlePlayMenu = () => {
       if (!this.characterModal.visible && !this.checkLeadearboardVisibility()) {
         if (!this.profile) {
-          console.warn('⚠️ Cannot play: Profile not loaded yet. Showing character modal...');
+          if (this.profileLoadError) {
+            console.error('❌ Cannot play: Backend connection failed!');
+            console.error('Please refresh the page and try again.');
+            console.error('If the problem persists, the backend server may be down.');
+          } else {
+            console.warn('⚠️ Cannot play: Profile is still loading... Please wait a moment.');
+          }
           handleShowAvatarModal();
           return;
         }
@@ -282,7 +294,9 @@ class PlayScene extends Phaser.Scene {
     const debugInfo = [
       '🔐 DEBUG INFO',
       `Wallet: ${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 6)}`,
-      `Profile loaded: ${this.profile ? 'YES' : 'NO'}`,
+      `Profile: ${this.profile ? 'LOADED ✅' : this.profileLoadError ? 'ERROR ❌' : 'LOADING... ⏳'}`,
+      this.profileLoadError ? '⚠️ Backend Not Responding!' : '',
+      this.profileLoadError ? 'Check console for details' : '',
       this.profile ? `White Pijama NFT: ${this.profile.has_white_pijama_nft ? '✅' : '❌'}` : '',
       this.profile ? `Boss NFT: ${this.profile.has_boss_nft ? '✅' : '❌'}` : '',
       this.profile ? `Blue Victor NFT: ${this.profile.has_blue_victor_nft ? '✅' : '❌'}` : '',

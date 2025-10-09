@@ -9,6 +9,9 @@ export default class SocketHandler {
   scene: PlayScene;
   socket: Socket;
   accessToken: string;
+  private profileRetryCount: number = 0;
+  private maxProfileRetries: number = 3;
+  private profileRequestTimeout: NodeJS.Timeout | null = null;
 
   constructor({
     accessToken,
@@ -62,7 +65,18 @@ export default class SocketHandler {
         'Blue Victor (Character 2)': profile.has_blue_victor_nft ? '✅ OWNED' : '❌ NOT OWNED',
         'Selected Character': profile.selected_character
       });
+
+      // Clear any pending timeout
+      if (this.profileRequestTimeout) {
+        clearTimeout(this.profileRequestTimeout);
+        this.profileRequestTimeout = null;
+      }
+
+      // Reset retry count on successful response
+      this.profileRetryCount = 0;
+
       this.scene.profile = profile;
+      this.scene.profileLoadError = false;
 
       // Update debug UI
       if (this.scene.updateDebugUI) {
@@ -77,7 +91,7 @@ export default class SocketHandler {
   }
 
   getProfile = () => {
-    console.log('🔄 SocketHandler: Requesting profile from backend...');
+    console.log(`🔄 SocketHandler: Requesting profile from backend... (Attempt ${this.profileRetryCount + 1}/${this.maxProfileRetries})`);
     console.log('📤 Emitting getVDashProfile event with:', {
       hasAccessToken: !!this.accessToken,
       tokenLength: this.accessToken?.length || 0,
@@ -90,17 +104,50 @@ export default class SocketHandler {
       // Try to reconnect
       console.log('🔄 Attempting to reconnect socket...');
       this.socket.connect();
+
+      // Wait for connection before retrying
+      setTimeout(() => {
+        if (this.socket.connected && this.profileRetryCount < this.maxProfileRetries) {
+          this.profileRetryCount++;
+          this.getProfile();
+        }
+      }, 2000);
+      return;
     }
 
     this.socket.emit('getVDashProfile', {
       accessToken: this.accessToken
     });
 
-    // Set a timeout to warn if profile doesn't arrive
-    setTimeout(() => {
+    // Clear any existing timeout
+    if (this.profileRequestTimeout) {
+      clearTimeout(this.profileRequestTimeout);
+    }
+
+    // Set a timeout to retry or fail
+    this.profileRequestTimeout = setTimeout(() => {
       if (!this.scene.profile) {
-        console.error('⏱️ TIMEOUT: Profile not received after 5 seconds!');
-        console.error('Check backend server status and socket connection.');
+        console.error(`⏱️ TIMEOUT: Profile not received after 5 seconds! (Attempt ${this.profileRetryCount + 1}/${this.maxProfileRetries})`);
+
+        if (this.profileRetryCount < this.maxProfileRetries - 1) {
+          this.profileRetryCount++;
+          console.log(`🔄 Retrying profile request... (${this.profileRetryCount}/${this.maxProfileRetries})`);
+          this.getProfile();
+        } else {
+          console.error('❌ FATAL: Failed to load profile after multiple attempts!');
+          console.error('Backend server at', SOCKET_API_URL, 'is not responding.');
+          console.error('Please check:');
+          console.error('1. Backend server is running');
+          console.error('2. Socket.io endpoint is accessible');
+          console.error('3. getVDashProfile event handler is implemented');
+          console.error('4. JWT token validation is working');
+
+          // Mark error state in scene
+          this.scene.profileLoadError = true;
+          if (this.scene.updateDebugUI) {
+            this.scene.updateDebugUI();
+          }
+        }
       }
     }, 5000);
   };

@@ -2,7 +2,17 @@
 
 ## Summary of Changes
 
-I've reverted your uncommitted changes and added comprehensive debug logging throughout the authentication and game initialization flow. All console logs will now help you identify exactly where the problem is.
+### Latest Update: Resilient Backend Communication
+
+**NEW FEATURES:**
+- ✅ **Automatic Retry Mechanism**: Profile requests retry up to 3 times (5 seconds each)
+- ✅ **Clear Error States**: Visual feedback in debug UI when backend fails
+- ✅ **Better Error Messages**: Console logs explain exactly what went wrong
+- ✅ **Graceful Degradation**: Game won't crash if backend is down
+
+### Previous Updates
+
+I've added comprehensive debug logging throughout the authentication and game initialization flow. All console logs will now help you identify exactly where the problem is.
 
 ## What I Found
 
@@ -119,8 +129,10 @@ Login with the wallet that owns NFTs. Watch for these logs:
 Then the backend is not reachable or refusing connections.
 
 ### Step 6: Watch for Profile Response
+
+**SUCCESS:**
 ```
-🔄 SocketHandler: Requesting profile from backend...
+🔄 SocketHandler: Requesting profile from backend... (Attempt 1/3)
 📤 Emitting getVDashProfile event with: {socketConnected: true, ...}
 ✅ Received profile from backend: {...}
 🎮 NFT Ownership Details:
@@ -129,26 +141,56 @@ Then the backend is not reachable or refusing connections.
    Blue Victor (Character 2): ❌ NOT OWNED
 ```
 
-**If you see this after 5 seconds:**
+**AUTOMATIC RETRY (if backend is slow):**
 ```
-⏱️ TIMEOUT: Profile not received after 5 seconds!
-Check backend server status and socket connection.
+⏱️ TIMEOUT: Profile not received after 5 seconds! (Attempt 1/3)
+🔄 Retrying profile request... (1/3)
+🔄 SocketHandler: Requesting profile from backend... (Attempt 2/3)
 ```
-Then the backend is not responding to the profile request.
+
+**FINAL FAILURE (after 3 attempts × 5 seconds = 15 seconds):**
+```
+⏱️ TIMEOUT: Profile not received after 5 seconds! (Attempt 3/3)
+❌ FATAL: Failed to load profile after multiple attempts!
+Backend server at https://vdash-api.supervictornft.com/ is not responding.
+Please check:
+1. Backend server is running
+2. Socket.io endpoint is accessible
+3. getVDashProfile event handler is implemented
+4. JWT token validation is working
+```
+
+The debug UI will show: `Profile: ERROR ❌` and `⚠️ Backend Not Responding!`
 
 ### Step 7: Check Debug UI
-Look at the **top-right corner** of the game screen. You should see:
+Look at the **top-right corner** of the game screen. You'll see one of these states:
+
+**LOADING STATE (while waiting for backend):**
 ```
 🔐 DEBUG INFO
 Wallet: erd1abc...xyz123
-Profile loaded: YES
+Profile: LOADING... ⏳
+```
+
+**SUCCESS STATE:**
+```
+🔐 DEBUG INFO
+Wallet: erd1abc...xyz123
+Profile: LOADED ✅
 White Pijama NFT: ✅
 Boss NFT: ❌
 Blue Victor NFT: ❌
 Selected: Character 0
 ```
 
-If it says `Profile loaded: NO`, then the backend hasn't responded yet.
+**ERROR STATE (backend failed after retries):**
+```
+🔐 DEBUG INFO
+Wallet: erd1abc...xyz123
+Profile: ERROR ❌
+⚠️ Backend Not Responding!
+Check console for details
+```
 
 ### Step 8: Try to Play
 Click the "Play" button or "Avatar" button and watch for:
