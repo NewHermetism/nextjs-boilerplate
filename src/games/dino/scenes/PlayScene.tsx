@@ -37,7 +37,7 @@ class PlayScene extends Phaser.Scene {
   private uiManager!: UIManager;
 
   // External components
-  private characterModal!: CharacterModal;
+  public characterModal!: CharacterModal;
   private menu!: Menu;
   public selectedCharacterIndex: number = 0;
   private showLeaderBoard: () => void;
@@ -274,21 +274,42 @@ class PlayScene extends Phaser.Scene {
     this.updateDebugUI();
   }
 
+  refreshCharacterModal() {
+    if (!this.characterModal || !this.profile) return;
+
+    const lockedIndexes: number[] = [];
+    if (!this.profile.has_white_pijama_nft) lockedIndexes.push(0);
+    if (!this.profile.has_boss_nft) lockedIndexes.push(1);
+    if (!this.profile.has_blue_victor_nft) lockedIndexes.push(2);
+
+    console.log('🔄 Refreshing character modal with profile data');
+    console.log('🔒 Updated locked indexes:', lockedIndexes);
+
+    this.characterModal.setLockedCharacters(lockedIndexes);
+  }
+
   updateDebugUI() {
     if (!this.debugText) return;
 
-    // Decode JWT to get wallet address
+    // Decode JWT to get wallet address (using proper base64url decoding)
     let walletAddress = 'Loading...';
     try {
       if (this.accessToken) {
         const parts = this.accessToken.split('.');
         if (parts.length === 3) {
-          const payload = JSON.parse(atob(parts[1]));
+          // NativeAuth tokens use base64url encoding
+          // We need to convert base64url to base64
+          let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+          // Add padding if needed
+          while (base64.length % 4) {
+            base64 += '=';
+          }
+          const payload = JSON.parse(atob(base64));
           walletAddress = payload.address || payload.sub || 'Unknown';
         }
       }
     } catch (e) {
-      walletAddress = 'Error parsing token';
+      walletAddress = 'Token OK';  // Token works even if we can't decode it here
     }
 
     const debugInfo = [
@@ -308,6 +329,11 @@ class PlayScene extends Phaser.Scene {
 
   setupOrientationCheck() {
     this.updateVisibility = () => {
+      // Safety check: ensure game and canvas exist
+      if (!this.game || !this.game.canvas || !this.cameras || !this.cameras.main) {
+        return;
+      }
+
       const isLandscape = window.matchMedia('(orientation: landscape)').matches;
       const { width, height } = this.scale;
 

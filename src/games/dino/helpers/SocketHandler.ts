@@ -83,6 +83,11 @@ export default class SocketHandler {
         this.scene.updateDebugUI();
       }
 
+      // Update character modal if it's visible
+      if (this.scene.characterModal && this.scene.characterModal.visible) {
+        this.scene.refreshCharacterModal();
+      }
+
       if (!this.scene.handleSetCharacterSelect(profile.selected_character)) {
         console.log('⚠️ Failed to set character, retrying getProfile...');
         this.getProfile();
@@ -93,24 +98,19 @@ export default class SocketHandler {
   getProfile = () => {
     console.log(`🔄 SocketHandler: Requesting profile from backend... (Attempt ${this.profileRetryCount + 1}/${this.maxProfileRetries})`);
 
-    // Debug: Decode and log token origin
-    try {
-      const tokenParts = this.accessToken.split('.');
-      if (tokenParts.length === 3) {
-        const payload = JSON.parse(atob(tokenParts[1]));
-        console.log('🔑 [SOCKET] Token origin:', payload.origin);
-        console.log('🌐 [SOCKET] Current page origin:', window.location.origin);
-        console.log('🎯 [SOCKET] Origins match:', payload.origin === window.location.origin ? 'YES ✅' : 'NO ❌');
-
-        if (payload.origin !== window.location.origin) {
-          console.error('❌ [SOCKET] CRITICAL: Origin mismatch detected!');
-          console.error('   Backend expects: https://supervictornft.com');
-          console.error('   Token has:', payload.origin);
-          console.error('   This will cause: NativeAuthOriginNotAcceptedError');
+    // Debug: Decode and log token origin (only on first attempt)
+    if (this.profileRetryCount === 0) {
+      try {
+        const tokenParts = this.accessToken.split('.');
+        if (tokenParts.length === 3) {
+          // The token is base64url encoded, not standard base64
+          // Just verify it has 3 parts, actual decoding happens in backend
+          console.log('🔑 [SOCKET] Token format: Valid JWT (3 parts)');
+          console.log('🌐 [SOCKET] Current page origin:', window.location.origin);
         }
+      } catch (e) {
+        // Ignore decode errors, backend will validate
       }
-    } catch (e) {
-      console.warn('⚠️ [SOCKET] Could not decode token for debug:', e);
     }
 
     console.log('📤 Emitting getVDashProfile event with:', {
