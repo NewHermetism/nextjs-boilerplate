@@ -226,7 +226,7 @@ class PlayScene extends Phaser.Scene {
 
     if (this.input.keyboard) {
       this.debugMenuToggleHandler = () => this.toggleDebugMenu();
-      this.input.keyboard.on('keydown-M', this.debugMenuToggleHandler);
+      this.input.keyboard.on('keydown-P', this.debugMenuToggleHandler);
     }
   }
 
@@ -331,7 +331,7 @@ class PlayScene extends Phaser.Scene {
     menu.appendChild(title);
 
     const hint = document.createElement('div');
-    hint.textContent = 'Press M to toggle';
+    hint.textContent = 'Press P to toggle';
     hint.style.fontSize = '12px';
     hint.style.opacity = '0.7';
     hint.style.marginBottom = '12px';
@@ -379,20 +379,25 @@ class PlayScene extends Phaser.Scene {
     this.isCollisionDebugEnabled = enabled;
 
     if (enabled) {
-      if (!this.physicsDebugGraphic || !this.physicsDebugGraphic.scene) {
-        this.physicsDebugGraphic = this.physics.world.createDebugGraphic();
-        this.physicsDebugGraphic.setDepth(9999);
+      // Always recreate to ensure fresh state
+      if (this.physicsDebugGraphic) {
+        this.physicsDebugGraphic.destroy();
       }
+
+      this.physicsDebugGraphic = this.add.graphics();
+      this.physicsDebugGraphic.setDepth(10000);
+
+      // Enable debug mode
       this.physics.world.drawDebug = true;
-      this.physicsDebugGraphic.setVisible(true);
-      this.physicsDebugGraphic.clear();
       this.physics.world.debugGraphic = this.physicsDebugGraphic;
     } else {
       this.physics.world.drawDebug = false;
       if (this.physicsDebugGraphic) {
         this.physicsDebugGraphic.clear();
-        this.physicsDebugGraphic.setVisible(false);
+        this.physicsDebugGraphic.destroy();
+        this.physicsDebugGraphic = undefined;
       }
+      this.physics.world.debugGraphic = undefined;
     }
 
     this.updateCollisionButtonLabel();
@@ -411,17 +416,26 @@ class PlayScene extends Phaser.Scene {
       return;
     }
 
+    // Clear previous frame
     this.physicsDebugGraphic.clear();
-    const worldAny = this.physics.world as typeof this.physics.world & {
-      updateDebugGraphic?: () => void;
-    };
 
-    worldAny.debugGraphic = this.physicsDebugGraphic;
-    worldAny.drawDebug = true;
+    // Draw all physics bodies manually for better control
+    this.physics.world.bodies.entries.forEach((body: Phaser.Physics.Arcade.Body) => {
+      if (!body.enable) return;
 
-    if (typeof worldAny.updateDebugGraphic === 'function') {
-      worldAny.updateDebugGraphic();
-    }
+      // Draw body bounds
+      this.physicsDebugGraphic!.lineStyle(1, 0x00ff00, 1);
+      this.physicsDebugGraphic!.strokeRect(
+        body.x,
+        body.y,
+        body.width,
+        body.height
+      );
+
+      // Draw center point
+      this.physicsDebugGraphic!.fillStyle(0xff0000, 1);
+      this.physicsDebugGraphic!.fillCircle(body.center.x, body.center.y, 2);
+    });
   }
 
   setupOrientationCheck() {
@@ -594,7 +608,7 @@ class PlayScene extends Phaser.Scene {
     }
     this.game.events.off('audio:mute-changed', this.handleMuteChange, this);
     if (this.debugMenuToggleHandler && this.input.keyboard) {
-      this.input.keyboard.off('keydown-M', this.debugMenuToggleHandler);
+      this.input.keyboard.off('keydown-P', this.debugMenuToggleHandler);
       this.debugMenuToggleHandler = undefined;
     }
     if (this.isCollisionDebugEnabled) {

@@ -13,15 +13,15 @@ export default class DinoCharacter {
     this.scene = scene;
     this.onGroundPosition = GAME_SETTINGS.ON_GROUND_POSITION;
 
-    // Create sprite
+    // Create sprite with precise hitbox matching sprite body
     this.sprite = this.scene.physics.add
       .sprite(70, y, 'idle_boss')
       .setCollideWorldBounds(true)
       .setGravityY(GAME_SETTINGS.GRAVITY)
-      .setBodySize(123, 117)
+      .setBodySize(85, 88)
       .setDepth(1)
       .setOrigin(0, 1)
-      .setOffset(0, this.onGroundPosition);
+      .setOffset(19, this.onGroundPosition + 22);
 
     this.jumpSound = this.scene.sound.add('jump', SOUND_CONFIG.JUMP);
 
@@ -100,26 +100,26 @@ export default class DinoCharacter {
 
   updateCharacter() {
     switch (this.scene.selectedCharacterIndex) {
-      case 0: // Pijamas
+      case 0: // Pijamas - Precise hitbox matching sprite body (excludes hair)
         this.sprite
           .play('idle_pijamas', true)
-          .setBodySize(60, 100)
-          .setSize(60, 100)
-          .setOffset(0, this.onGroundPosition - 5);
+          .setBodySize(45, 70)
+          .setSize(45, 70)
+          .setOffset(7, this.onGroundPosition + 25);
         break;
-      case 1: // Boss (default)
+      case 1: // Boss - Precise hitbox matching sprite body (excludes horns)
         this.sprite
           .play('idle_boss', true)
-          .setBodySize(123, 117)
-          .setSize(123, 117)
-          .setOffset(0, this.onGroundPosition - 5);
+          .setBodySize(85, 88)
+          .setSize(85, 88)
+          .setOffset(19, this.onGroundPosition + 22);
         break;
-      case 2: // Blue
+      case 2: // Blue - Precise hitbox matching sprite body (excludes hair)
         this.sprite
           .play('idle_blue', true)
-          .setBodySize(40, 88)
-          .setSize(40, 88)
-          .setOffset(0, this.onGroundPosition - 5);
+          .setBodySize(30, 58)
+          .setSize(30, 58)
+          .setOffset(5, this.onGroundPosition + 25);
         break;
     }
   }
@@ -137,27 +137,27 @@ export default class DinoCharacter {
 
   run() {
     switch (this.scene.selectedCharacterIndex) {
-      case 0: // Pijamas
+      case 0: // Pijamas - Precise hitbox, slightly wider when running
         this.sprite
           .play('running_pijamas', true)
-          .setBodySize(80, 100)
-          .setSize(80, 100)
-          .setOffset(0, this.onGroundPosition - 5);
+          .setBodySize(55, 70)
+          .setSize(55, 70)
+          .setOffset(12, this.onGroundPosition + 25);
         break;
-      case 1: // Boss
+      case 1: // Boss - Precise hitbox, arms extended when running
         this.sprite
           .play('running_boss', true)
-          .setBodySize(123, 117)
+          .setBodySize(95, 88)
           .setDepth(1)
           .setOrigin(0, 1)
-          .setOffset(0, this.onGroundPosition - 5);
+          .setOffset(14, this.onGroundPosition + 22);
         break;
-      case 2: // Blue
+      case 2: // Blue - Precise hitbox, slightly wider when running
         this.sprite
           .play('running_blue', true)
-          .setBodySize(60, 100)
-          .setSize(60, 100)
-          .setOffset(0, this.onGroundPosition - 5);
+          .setBodySize(38, 58)
+          .setSize(38, 58)
+          .setOffset(6, this.onGroundPosition + 25);
         break;
     }
   }

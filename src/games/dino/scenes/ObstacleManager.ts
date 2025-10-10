@@ -62,10 +62,10 @@ const OBSTACLE_BODY_CONFIG: Record<string, ObstacleBodyConfig> = {
   'enemy-lava': {
     scale: 1.4,
     body: {
-      widthRatio: 0.85,
-      heightRatio: 0.45,
-      offsetXRatio: 0.08,
-      bottomPaddingRatio: 0.02,
+      widthRatio: 0.60,  // Only bubbling lava center
+      heightRatio: 0.40,  // Danger zone of bubbling lava
+      offsetXRatio: 0.20,  // Center the danger zone
+      bottomPaddingRatio: 0.25,  // Leave space at bottom for ground
       anchor: 'bottom'
     }
   },
@@ -121,10 +121,10 @@ const OBSTACLE_BODY_CONFIG: Record<string, ObstacleBodyConfig> = {
   'enemy-toxic-waste': {
     scale: 1.5,
     body: {
-      widthRatio: 0.85,
-      heightRatio: 0.55,
-      offsetXRatio: 0.08,
-      bottomPaddingRatio: 0.05,
+      widthRatio: 0.55,  // Main barrel body only
+      heightRatio: 0.50,  // Barrel + toxic liquid
+      offsetXRatio: 0.22,  // Center the barrel
+      bottomPaddingRatio: 0.15,  // Leave space at bottom
       anchor: 'bottom'
     }
   }
