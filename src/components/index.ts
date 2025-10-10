@@ -5,3 +5,4 @@ export * from './MxLink';
 export * from './Button';
 export * from './TransactionsTracker';
 export * from './Label';
+export * from './UserInfoPanel';

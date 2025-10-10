@@ -1,4 +1,5 @@
 import { AuthRedirectWrapper } from 'wrappers';
+import { UserInfoPanel } from 'components';
 
 import { useScrollToElement } from 'hooks';
 import {
@@ -23,6 +24,7 @@ export const Home = () => {
 
   return (
     <AuthRedirectWrapper requireAuth={false}>
+      <UserInfoPanel />
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-8 w-full'>
         <div className='lg:space-y-4 flex lg:flex-col gap-3 lg:gap-1'>
           <Whitepaper />

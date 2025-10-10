@@ -16,7 +16,6 @@ import { VdashProfile } from '../vdash-utils/types/vdash/profile';
 class PlayScene extends Phaser.Scene {
   public SocketHandler: SocketHandler;
   public profile?: VdashProfile;
-  public profileLoadError: boolean = false;
   public gameId?: string;
 
   public gameSpeed: number;
@@ -24,9 +23,6 @@ class PlayScene extends Phaser.Scene {
   private hitSound!: Phaser.Sound.BaseSound;
   private startTrigger!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private backgroundMusic!: Phaser.Sound.BaseSound;
-
-  // Debug UI
-  private debugText?: Phaser.GameObjects.Text;
 
   // Managers
   private dinoCharacter!: DinoCharacter;
@@ -37,7 +33,7 @@ class PlayScene extends Phaser.Scene {
   private uiManager!: UIManager;
 
   // External components
-  public characterModal!: CharacterModal;
+  private characterModal!: CharacterModal;
   private menu!: Menu;
   public selectedCharacterIndex: number = 0;
   private showLeaderBoard: () => void;
@@ -73,39 +69,20 @@ class PlayScene extends Phaser.Scene {
   };
 
   constructor(
-    private accessToken: string,
+    accessToken: string,
     showLeaderBoard: () => void,
     checkLeadearboardVisibility: () => boolean
   ) {
     super('PlayScene');
-    console.log('🎬 PlayScene: Constructor called');
-    console.log('🔐 PlayScene: Access Token Info:', {
-      hasToken: !!accessToken,
-      tokenLength: accessToken?.length || 0,
-      tokenPreview: accessToken ? `${accessToken.substring(0, 20)}...` : 'N/A'
-    });
-
     this.gameSpeed = GAME_SETTINGS.INITIAL_GAME_SPEED;
     this.isGameRunning = false;
     this.showLeaderBoard = showLeaderBoard;
     this.checkLeadearboardVisibility = checkLeadearboardVisibility;
-
-    console.log('🔌 PlayScene: Initializing SocketHandler...');
     this.SocketHandler = new SocketHandler({ accessToken, scene: this });
-
-    console.log('📞 PlayScene: Requesting profile from backend...');
     this.SocketHandler.getProfile();
   }
 
   create() {
-    console.log('🏗️ PlayScene: create() method called');
-    console.log('📊 PlayScene: Current state:', {
-      hasProfile: !!this.profile,
-      profileData: this.profile,
-      gameSpeed: this.gameSpeed,
-      isGameRunning: this.isGameRunning
-    });
-
     const { height } = this.scale;
 
     // Initialize background music
@@ -142,25 +119,10 @@ class PlayScene extends Phaser.Scene {
       if (!this.checkLeadearboardVisibility()) {
         const lockedIndexes: number[] = [];
         if (this.profile) {
-          console.log('📊 Profile NFT ownership:', {
-            white_pijama: this.profile.has_white_pijama_nft,
-            boss: this.profile.has_boss_nft,
-            blue_victor: this.profile.has_blue_victor_nft
-          });
           if (!this.profile.has_white_pijama_nft) lockedIndexes.push(0);
           if (!this.profile.has_boss_nft) lockedIndexes.push(1);
           if (!this.profile.has_blue_victor_nft) lockedIndexes.push(2);
-        } else {
-          if (this.profileLoadError) {
-            console.error('❌ Cannot show characters: Backend connection failed!');
-            console.error('The backend server is not responding. Please try again later.');
-          } else {
-            console.warn('⚠️ Profile is still loading... Please wait.');
-          }
-          // Lock all characters if no profile
-          lockedIndexes.push(0, 1, 2);
         }
-        console.log('🔒 Locked character indexes:', lockedIndexes);
         this.characterModal.setLockedCharacters(lockedIndexes);
         this.characterModal.show();
       }
@@ -174,30 +136,31 @@ class PlayScene extends Phaser.Scene {
 
     const handlePlayMenu = () => {
       if (!this.characterModal.visible && !this.checkLeadearboardVisibility()) {
+        // Wait for profile to load before allowing game start
         if (!this.profile) {
           if (this.profileLoadError) {
-            console.error('❌ Cannot play: Backend connection failed!');
-            console.error('Please refresh the page and try again.');
-            console.error('If the problem persists, the backend server may be down.');
+            console.error('[PLAY] Cannot play: Backend connection failed');
+            console.error('[PLAY] Please refresh the page and try again');
           } else {
-            console.warn('⚠️ Cannot play: Profile is still loading... Please wait a moment.');
+            console.warn('[PLAY] Profile is still loading, please wait');
           }
           handleShowAvatarModal();
           return;
         }
 
+        // Check if user has any NFT
         const hasAnyNFT =
           this.profile.has_white_pijama_nft ||
           this.profile.has_boss_nft ||
           this.profile.has_blue_victor_nft;
 
         if (hasAnyNFT) {
-          console.log('✅ User has NFT, starting game...');
+          console.log('[PLAY] User has NFT, starting game');
           this.menu.hide();
           this.SocketHandler.startGameEvent();
           this.restartGame();
         } else {
-          console.log('❌ User has no NFTs, showing character modal to purchase...');
+          console.log('[PLAY] User has no NFTs, showing purchase modal');
           handleShowAvatarModal();
         }
       }
@@ -250,90 +213,10 @@ class PlayScene extends Phaser.Scene {
 
     // Initialize start trigger
     this.initStartTrigger();
-
-    // Initialize debug UI
-    this.initDebugUI();
-  }
-
-  initDebugUI() {
-    const { width } = this.scale;
-
-    // Create debug text in top-right corner
-    this.debugText = this.add
-      .text(width - 10, 10, '', {
-        fontSize: '12px',
-        color: '#00ff00',
-        backgroundColor: '#000000',
-        padding: { x: 5, y: 5 },
-        fontFamily: 'monospace'
-      })
-      .setOrigin(1, 0)
-      .setDepth(1000)
-      .setScrollFactor(0);
-
-    this.updateDebugUI();
-  }
-
-  refreshCharacterModal() {
-    if (!this.characterModal || !this.profile) return;
-
-    const lockedIndexes: number[] = [];
-    if (!this.profile.has_white_pijama_nft) lockedIndexes.push(0);
-    if (!this.profile.has_boss_nft) lockedIndexes.push(1);
-    if (!this.profile.has_blue_victor_nft) lockedIndexes.push(2);
-
-    console.log('🔄 Refreshing character modal with profile data');
-    console.log('🔒 Updated locked indexes:', lockedIndexes);
-
-    this.characterModal.setLockedCharacters(lockedIndexes);
-  }
-
-  updateDebugUI() {
-    if (!this.debugText) return;
-
-    // Decode JWT to get wallet address (using proper base64url decoding)
-    let walletAddress = 'Loading...';
-    try {
-      if (this.accessToken) {
-        const parts = this.accessToken.split('.');
-        if (parts.length === 3) {
-          // NativeAuth tokens use base64url encoding
-          // We need to convert base64url to base64
-          let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-          // Add padding if needed
-          while (base64.length % 4) {
-            base64 += '=';
-          }
-          const payload = JSON.parse(atob(base64));
-          walletAddress = payload.address || payload.sub || 'Unknown';
-        }
-      }
-    } catch (e) {
-      walletAddress = 'Token OK';  // Token works even if we can't decode it here
-    }
-
-    const debugInfo = [
-      '🔐 DEBUG INFO',
-      `Wallet: ${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 6)}`,
-      `Profile: ${this.profile ? 'LOADED ✅' : this.profileLoadError ? 'ERROR ❌' : 'LOADING... ⏳'}`,
-      this.profileLoadError ? '⚠️ Backend Not Responding!' : '',
-      this.profileLoadError ? 'Check console for details' : '',
-      this.profile ? `White Pijama NFT: ${this.profile.has_white_pijama_nft ? '✅' : '❌'}` : '',
-      this.profile ? `Boss NFT: ${this.profile.has_boss_nft ? '✅' : '❌'}` : '',
-      this.profile ? `Blue Victor NFT: ${this.profile.has_blue_victor_nft ? '✅' : '❌'}` : '',
-      this.profile ? `Selected: Character ${this.profile.selected_character}` : ''
-    ].filter(Boolean).join('\n');
-
-    this.debugText.setText(debugInfo);
   }
 
   setupOrientationCheck() {
     this.updateVisibility = () => {
-      // Safety check: ensure game and canvas exist
-      if (!this.game || !this.game.canvas || !this.cameras || !this.cameras.main) {
-        return;
-      }
-
       const isLandscape = window.matchMedia('(orientation: landscape)').matches;
       const { width, height } = this.scale;
 
