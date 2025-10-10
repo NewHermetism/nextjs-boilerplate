@@ -92,6 +92,27 @@ export default class SocketHandler {
 
   getProfile = () => {
     console.log(`🔄 SocketHandler: Requesting profile from backend... (Attempt ${this.profileRetryCount + 1}/${this.maxProfileRetries})`);
+
+    // Debug: Decode and log token origin
+    try {
+      const tokenParts = this.accessToken.split('.');
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(atob(tokenParts[1]));
+        console.log('🔑 [SOCKET] Token origin:', payload.origin);
+        console.log('🌐 [SOCKET] Current page origin:', window.location.origin);
+        console.log('🎯 [SOCKET] Origins match:', payload.origin === window.location.origin ? 'YES ✅' : 'NO ❌');
+
+        if (payload.origin !== window.location.origin) {
+          console.error('❌ [SOCKET] CRITICAL: Origin mismatch detected!');
+          console.error('   Backend expects: https://supervictornft.com');
+          console.error('   Token has:', payload.origin);
+          console.error('   This will cause: NativeAuthOriginNotAcceptedError');
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ [SOCKET] Could not decode token for debug:', e);
+    }
+
     console.log('📤 Emitting getVDashProfile event with:', {
       hasAccessToken: !!this.accessToken,
       tokenLength: this.accessToken?.length || 0,

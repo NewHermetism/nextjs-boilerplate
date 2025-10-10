@@ -40,10 +40,15 @@ export const Unlock = () => {
   const navigate = useNavigate();
   const { isMobile } = useIsMobile();
 
+  // Debug: Log current origin on page load
+  console.log('🌐 [UNLOCK] Current page origin:', window.location.origin);
+  console.log('🌐 [UNLOCK] Full URL:', window.location.href);
+
   const [onInitiateLogin, { isLoading }] = useIframeLogin({
     callbackRoute: RouteNamesEnum.game,
     nativeAuth,
     onLoginRedirect: () => {
+      console.log('✅ [UNLOCK] Login redirect triggered');
       navigate(RouteNamesEnum.game);
     }
   });
@@ -52,6 +57,35 @@ export const Unlock = () => {
     callbackRoute: RouteNamesEnum.game,
     nativeAuth,
     onLoginRedirect: () => {
+      console.log('✅ [UNLOCK] onLoginRedirect called');
+
+      // Debug: Check token after successful login
+      setTimeout(() => {
+        try {
+          const loginInfo = localStorage.getItem('persist:loginInfo');
+          if (loginInfo) {
+            const parsed = JSON.parse(loginInfo);
+            const tokenLogin = JSON.parse(parsed.tokenLogin || '{}');
+            const token = tokenLogin.nativeAuthToken;
+
+            if (token) {
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              console.log('🔑 [UNLOCK] Token origin:', payload.origin);
+              console.log('🌐 [UNLOCK] Page origin:', window.location.origin);
+              console.log('✅ [UNLOCK] Match:', payload.origin === window.location.origin ? 'YES' : 'NO ❌');
+
+              if (payload.origin !== window.location.origin) {
+                console.error('❌ [UNLOCK] ORIGIN MISMATCH DETECTED!');
+                console.error('   Expected:', window.location.origin);
+                console.error('   Got:', payload.origin);
+              }
+            }
+          }
+        } catch (e) {
+          console.error('❌ [UNLOCK] Error checking token:', e);
+        }
+      }, 500);
+
       navigate(RouteNamesEnum.game);
     },
     disabled: isLoading

@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { useEffect } from 'react';
 
 import {
   AxiosInterceptorContext,
@@ -21,6 +22,15 @@ import { routes } from 'routes';
 import { BatchTransactionsContextProvider } from 'wrappers';
 
 const AppContent = () => {
+  // Debug: Log app initialization
+  useEffect(() => {
+    console.log('🚀 [APP] Application initialized');
+    console.log('🌐 [APP] Current origin:', window.location.origin);
+    console.log('🌐 [APP] Full URL:', window.location.href);
+    console.log('🔑 [APP] NativeAuth enabled: true');
+    console.log('📡 [APP] Environment:', environment);
+  }, []);
+
   return (
     <DappProvider
       environment={environment}
