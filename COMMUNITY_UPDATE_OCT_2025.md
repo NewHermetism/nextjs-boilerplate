@@ -1,4 +1,4 @@
-# 🎮 SuperVictor Game Update - October 2025
+# 🎮  V-DASH Update - October 2025
 
 Hey SuperVictor Community! 👋
 
@@ -145,7 +145,7 @@ We want to hear from you! Share your experience:
 **What needs work?**
 - Let us know if you encounter any issues
 - Suggestions for hitbox tuning
-- Feature requests
+- Feature requestsUser Info
 ---
 
 **Happy gaming! 🎮✨**

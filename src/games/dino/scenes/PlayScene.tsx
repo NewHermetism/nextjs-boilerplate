@@ -226,7 +226,7 @@ class PlayScene extends Phaser.Scene {
 
     if (this.input.keyboard) {
       this.debugMenuToggleHandler = () => this.toggleDebugMenu();
-      this.input.keyboard.on('keydown-P', this.debugMenuToggleHandler);
+      this.input.keyboard.on('keydown-Z', this.debugMenuToggleHandler);
     }
   }
 
@@ -331,7 +331,7 @@ class PlayScene extends Phaser.Scene {
     menu.appendChild(title);
 
     const hint = document.createElement('div');
-    hint.textContent = 'Press P to toggle';
+    hint.textContent = 'Press Z to toggle';
     hint.style.fontSize = '12px';
     hint.style.opacity = '0.7';
     hint.style.marginBottom = '12px';
@@ -419,23 +419,40 @@ class PlayScene extends Phaser.Scene {
     // Clear previous frame
     this.physicsDebugGraphic.clear();
 
-    // Draw all physics bodies manually for better control
-    this.physics.world.bodies.entries.forEach((body: Phaser.Physics.Arcade.Body) => {
-      if (!body.enable) return;
+    // Set line style once
+    this.physicsDebugGraphic.lineStyle(1, 0x00ff00, 1);
 
-      // Draw body bounds
-      this.physicsDebugGraphic!.lineStyle(1, 0x00ff00, 1);
-      this.physicsDebugGraphic!.strokeRect(
-        body.x,
-        body.y,
-        body.width,
-        body.height
+    // Draw character body
+    const playerBody = this.dinoCharacter.body.body as Phaser.Physics.Arcade.Body;
+    if (playerBody && playerBody.enable) {
+      this.physicsDebugGraphic.strokeRect(
+        playerBody.x,
+        playerBody.y,
+        playerBody.width,
+        playerBody.height
       );
+    }
 
-      // Draw center point
-      this.physicsDebugGraphic!.fillStyle(0xff0000, 1);
-      this.physicsDebugGraphic!.fillCircle(body.center.x, body.center.y, 2);
-    });
+    // Draw obstacle bodies
+    const obstacles = this.obstacleManager.group.getChildren();
+    for (let i = 0; i < obstacles.length; i++) {
+      const sprite = obstacles[i] as Phaser.Physics.Arcade.Sprite;
+      const body = sprite.body as Phaser.Physics.Arcade.Body;
+      if (body && body.enable) {
+        this.physicsDebugGraphic.strokeRect(
+          body.x,
+          body.y,
+          body.width,
+          body.height
+        );
+      }
+    }
+
+    // Draw center points
+    this.physicsDebugGraphic.fillStyle(0xff0000, 1);
+    if (playerBody && playerBody.enable) {
+      this.physicsDebugGraphic.fillCircle(playerBody.center.x, playerBody.center.y, 3);
+    }
   }
 
   setupOrientationCheck() {
@@ -583,11 +600,11 @@ class PlayScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number): void {
-    if (this.isCollisionDebugEnabled) {
-      this.refreshCollisionDebug();
-    }
-
     if (!this.isGameRunning || !this.gameId) {
+      // Still update debug visualization even when game is not running
+      if (this.isCollisionDebugEnabled) {
+        this.refreshCollisionDebug();
+      }
       return;
     }
 
@@ -599,6 +616,11 @@ class PlayScene extends Phaser.Scene {
 
     // Update character animation
     this.dinoCharacter.updateAnimation();
+
+    // Update debug visualization last (only if enabled)
+    if (this.isCollisionDebugEnabled) {
+      this.refreshCollisionDebug();
+    }
   }
 
   shutdown() {
@@ -608,7 +630,7 @@ class PlayScene extends Phaser.Scene {
     }
     this.game.events.off('audio:mute-changed', this.handleMuteChange, this);
     if (this.debugMenuToggleHandler && this.input.keyboard) {
-      this.input.keyboard.off('keydown-P', this.debugMenuToggleHandler);
+      this.input.keyboard.off('keydown-Z', this.debugMenuToggleHandler);
       this.debugMenuToggleHandler = undefined;
     }
     if (this.isCollisionDebugEnabled) {
