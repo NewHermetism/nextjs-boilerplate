@@ -29,6 +29,7 @@ const AppContent = () => {
     console.log('🌐 [APP] Full URL:', window.location.href);
     console.log('🔑 [APP] NativeAuth enabled: true');
     console.log('📡 [APP] Environment:', environment);
+    console.log('🔄 [APP] Deployment timestamp:', new Date().toISOString());
   }, []);
 
   return (
