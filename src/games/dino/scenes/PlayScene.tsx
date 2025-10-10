@@ -22,7 +22,17 @@ class PlayScene extends Phaser.Scene {
   private isGameRunning: boolean;
   private hitSound!: Phaser.Sound.BaseSound;
   private startTrigger!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
-  private backgroundMusic!: Phaser.Sound.BaseSound;
+  private backgroundMusic?: Phaser.Sound.BaseSound;
+  private isAudioMuted = false;
+  private isDebugMenuVisible = false;
+  private isCollisionDebugEnabled = false;
+  private debugMenuElement?: HTMLDivElement;
+  private debugCollisionButton?: HTMLButtonElement;
+  private debugMenuToggleHandler?: () => void;
+  private physicsDebugGraphic?: Phaser.GameObjects.Graphics;
+  private handleMuteChange = (isMuted: boolean) => {
+    this.applyGlobalMute(isMuted);
+  };
 
   // Managers
   private dinoCharacter!: DinoCharacter;
@@ -41,12 +51,11 @@ class PlayScene extends Phaser.Scene {
   private checkLeadearboardVisibility: () => boolean;
   public handleSetCharacterSelect = (index: number): boolean => {
     this.selectedCharacterIndex = index;
-    if (this.environmentManager && this.characterModal) {
+    const canUpdateScene = this.environmentManager && this.characterModal;
+    if (canUpdateScene) {
       this.environmentManager.onSelectCharacter();
       this.characterModal.updateCharacterOpacity();
-      return true;
     }
-    return false;
 
     // Update music when character is selected
     if (this.isGameRunning) {
@@ -57,15 +66,10 @@ class PlayScene extends Phaser.Scene {
           ? 'boss_music'
           : 'blue_music';
 
-      if (this.backgroundMusic) {
-        this.backgroundMusic.stop();
-      }
-      this.backgroundMusic = this.sound.add(musicKey, {
-        volume: 0.15,
-        loop: true
-      });
-      this.backgroundMusic.play();
+      this.startBackgroundMusic(musicKey);
     }
+
+    return Boolean(canUpdateScene);
   };
 
   constructor(
@@ -85,18 +89,20 @@ class PlayScene extends Phaser.Scene {
   create() {
     const { height } = this.scale;
 
+    this.sound.pauseOnBlur = false;
+    this.sound.pauseOnHide = false;
+
     // Initialize background music
-    this.backgroundMusic = this.sound.add('menu_music', {
-      volume: 0.15,
-      loop: true
-    });
-    this.backgroundMusic.play();
+    const initialMute = this.getInitialMuteState();
+    this.applyGlobalMute(initialMute);
+    this.startBackgroundMusic('menu_music');
 
     // Setup device orientation check
     this.setupOrientationCheck();
 
     // Load sounds
     this.hitSound = this.sound.add('hit', SOUND_CONFIG.HIT);
+    this.hitSound.setMute(this.isAudioMuted);
 
     // Create start trigger
     this.startTrigger = this.physics.add
@@ -194,7 +200,9 @@ class PlayScene extends Phaser.Scene {
     this.inputManager = new InputManager(
       this,
       () => {
-        if (!this.menu.visible) this.dinoCharacter.jump();
+        if (!this.menu.visible && this.isGameRunning) {
+          this.dinoCharacter.jump();
+        }
       },
       handleRestartMenu,
       () => this.uiManager.showMenu(),
@@ -213,6 +221,207 @@ class PlayScene extends Phaser.Scene {
 
     // Initialize start trigger
     this.initStartTrigger();
+
+    this.game.events.on('audio:mute-changed', this.handleMuteChange, this);
+
+    if (this.input.keyboard) {
+      this.debugMenuToggleHandler = () => this.toggleDebugMenu();
+      this.input.keyboard.on('keydown-M', this.debugMenuToggleHandler);
+    }
+  }
+
+  private getInitialMuteState() {
+    const stored = this.registry.get('audioMuted');
+    if (typeof stored === 'boolean') {
+      return stored;
+    }
+    return this.sound.mute;
+  }
+
+  private applyGlobalMute(isMuted: boolean) {
+    this.isAudioMuted = isMuted;
+    this.sound.setMute(isMuted);
+    this.sound.sounds.forEach((sound) => {
+      if (sound === this.backgroundMusic) {
+        if (isMuted && sound.isPlaying) {
+          sound.pause();
+          sound.setMute(true);
+        }
+        if (!isMuted && sound.isPaused) {
+          sound.setMute(false);
+          sound.resume();
+        } else if (!isMuted) {
+          sound.setMute(false);
+        }
+        return;
+      }
+
+      sound.setMute(isMuted);
+    });
+
+    if (!isMuted && this.backgroundMusic && !this.backgroundMusic.isPlaying) {
+      this.backgroundMusic.play();
+    }
+  }
+
+  private startBackgroundMusic(key: string) {
+    const shouldReuse = this.backgroundMusic?.key === key;
+
+    if (!shouldReuse && this.backgroundMusic) {
+      this.backgroundMusic.stop();
+      this.backgroundMusic.destroy();
+      this.backgroundMusic = undefined;
+    }
+
+    if (!this.backgroundMusic || !shouldReuse) {
+      this.backgroundMusic = this.sound.add(key, {
+        volume: 0.15,
+        loop: true
+      });
+      this.backgroundMusic.setMute(this.isAudioMuted);
+    }
+
+    if (!this.backgroundMusic) return;
+
+    if (this.backgroundMusic.isPaused) {
+      this.backgroundMusic.resume();
+    } else {
+      const seekPosition = shouldReuse ? this.backgroundMusic.seek ?? 0 : 0;
+      this.backgroundMusic.stop();
+      this.backgroundMusic.play({ seek: seekPosition });
+    }
+
+    if (this.isAudioMuted) {
+      this.backgroundMusic.pause();
+      this.backgroundMusic.setMute(true);
+    }
+  }
+
+  private toggleDebugMenu() {
+    if (!this.debugMenuElement) {
+      this.createDebugMenu();
+    }
+
+    this.isDebugMenuVisible = !this.isDebugMenuVisible;
+    if (this.debugMenuElement) {
+      this.debugMenuElement.style.display = this.isDebugMenuVisible ? 'block' : 'none';
+    }
+  }
+
+  private createDebugMenu() {
+    const menu = document.createElement('div');
+    menu.style.position = 'fixed';
+    menu.style.top = '1rem';
+    menu.style.right = '1rem';
+    menu.style.zIndex = '9999';
+    menu.style.background = 'rgba(14,18,44,0.95)';
+    menu.style.border = '1px solid #6e4b9e';
+    menu.style.borderRadius = '12px';
+    menu.style.padding = '16px';
+    menu.style.minWidth = '220px';
+    menu.style.fontFamily = 'monospace';
+    menu.style.color = '#fff';
+    menu.style.boxShadow = '0 10px 25px rgba(0,0,0,0.45)';
+
+    const title = document.createElement('div');
+    title.textContent = 'Debug Menu';
+    title.style.fontWeight = 'bold';
+    title.style.marginBottom = '12px';
+    title.style.letterSpacing = '0.08em';
+    menu.appendChild(title);
+
+    const hint = document.createElement('div');
+    hint.textContent = 'Press M to toggle';
+    hint.style.fontSize = '12px';
+    hint.style.opacity = '0.7';
+    hint.style.marginBottom = '12px';
+    menu.appendChild(hint);
+
+    const collisionButton = document.createElement('button');
+    collisionButton.type = 'button';
+    collisionButton.style.display = 'block';
+    collisionButton.style.width = '100%';
+    collisionButton.style.padding = '8px 12px';
+    collisionButton.style.marginBottom = '8px';
+    collisionButton.style.background = '#6e4b9e';
+    collisionButton.style.border = 'none';
+    collisionButton.style.borderRadius = '8px';
+    collisionButton.style.cursor = 'pointer';
+    collisionButton.style.color = '#fff';
+    collisionButton.style.fontWeight = '600';
+    collisionButton.addEventListener('mouseenter', () => {
+      collisionButton.style.background = '#815abd';
+    });
+    collisionButton.addEventListener('mouseleave', () => {
+      collisionButton.style.background = '#6e4b9e';
+    });
+    collisionButton.addEventListener('click', () => {
+      this.setCollisionDebug(!this.isCollisionDebugEnabled);
+    });
+    menu.appendChild(collisionButton);
+
+    document.body.appendChild(menu);
+
+    this.debugMenuElement = menu as HTMLDivElement;
+    this.debugCollisionButton = collisionButton;
+    this.updateCollisionButtonLabel();
+    this.debugMenuElement.style.display = this.isDebugMenuVisible ? 'block' : 'none';
+  }
+
+  private updateCollisionButtonLabel() {
+    if (!this.debugCollisionButton) return;
+    this.debugCollisionButton.textContent = this.isCollisionDebugEnabled
+      ? 'Hide Collision Boxes'
+      : 'Show Collision Boxes';
+  }
+
+  private setCollisionDebug(enabled: boolean) {
+    this.isCollisionDebugEnabled = enabled;
+
+    if (enabled) {
+      if (!this.physicsDebugGraphic || !this.physicsDebugGraphic.scene) {
+        this.physicsDebugGraphic = this.physics.world.createDebugGraphic();
+        this.physicsDebugGraphic.setDepth(9999);
+      }
+      this.physics.world.drawDebug = true;
+      this.physicsDebugGraphic.setVisible(true);
+      this.physicsDebugGraphic.clear();
+      this.physics.world.debugGraphic = this.physicsDebugGraphic;
+    } else {
+      this.physics.world.drawDebug = false;
+      if (this.physicsDebugGraphic) {
+        this.physicsDebugGraphic.clear();
+        this.physicsDebugGraphic.setVisible(false);
+      }
+    }
+
+    this.updateCollisionButtonLabel();
+  }
+
+  private destroyDebugMenu() {
+    if (this.debugMenuElement?.parentNode) {
+      this.debugMenuElement.parentNode.removeChild(this.debugMenuElement);
+    }
+    this.debugMenuElement = undefined;
+    this.debugCollisionButton = undefined;
+  }
+
+  private refreshCollisionDebug() {
+    if (!this.isCollisionDebugEnabled || !this.physicsDebugGraphic) {
+      return;
+    }
+
+    this.physicsDebugGraphic.clear();
+    const worldAny = this.physics.world as typeof this.physics.world & {
+      updateDebugGraphic?: () => void;
+    };
+
+    worldAny.debugGraphic = this.physicsDebugGraphic;
+    worldAny.drawDebug = true;
+
+    if (typeof worldAny.updateDebugGraphic === 'function') {
+      worldAny.updateDebugGraphic();
+    }
   }
 
   setupOrientationCheck() {
@@ -324,7 +533,7 @@ class PlayScene extends Phaser.Scene {
     this.uiManager.showGameOver();
     this.hitSound.play();
     this.cameras.main.shake(100, 0.01);
-    this.backgroundMusic.stop();
+    this.backgroundMusic?.stop();
   }
 
   private handleBackButton() {
@@ -334,12 +543,7 @@ class PlayScene extends Phaser.Scene {
     this.isGameRunning = false;
     this.anims.pauseAll();
     this.gameSpeed = GAME_SETTINGS.INITIAL_GAME_SPEED;
-    this.backgroundMusic.stop();
-    this.backgroundMusic = this.sound.add('menu_music', {
-      volume: 0.15,
-      loop: true
-    });
-    this.backgroundMusic.play();
+    this.startBackgroundMusic('menu_music');
   }
 
   restartGame() {
@@ -361,21 +565,20 @@ class PlayScene extends Phaser.Scene {
         ? 'boss_music'
         : 'blue_music';
 
-    this.backgroundMusic.stop();
-    this.backgroundMusic = this.sound.add(musicKey, {
-      volume: 0.15,
-      loop: true
-    });
-    this.backgroundMusic.play();
+    this.startBackgroundMusic(musicKey);
   }
 
   update(time: number, delta: number): void {
+    if (this.isCollisionDebugEnabled) {
+      this.refreshCollisionDebug();
+    }
+
     if (!this.isGameRunning || !this.gameId) {
       return;
     }
 
     // Update environment
-    this.environmentManager.update(this.gameSpeed);
+    this.environmentManager.update(this.gameSpeed, delta);
 
     // Update obstacles
     this.obstacleManager.update(delta, this.gameSpeed);
@@ -387,6 +590,20 @@ class PlayScene extends Phaser.Scene {
   shutdown() {
     if (this.updateVisibility) {
       window.removeEventListener('resize', this.updateVisibility);
+      window.removeEventListener('orientationchange', this.updateVisibility);
+    }
+    this.game.events.off('audio:mute-changed', this.handleMuteChange, this);
+    if (this.debugMenuToggleHandler && this.input.keyboard) {
+      this.input.keyboard.off('keydown-M', this.debugMenuToggleHandler);
+      this.debugMenuToggleHandler = undefined;
+    }
+    if (this.isCollisionDebugEnabled) {
+      this.setCollisionDebug(false);
+    }
+    this.destroyDebugMenu();
+    if (this.physicsDebugGraphic) {
+      this.physicsDebugGraphic.destroy();
+      this.physicsDebugGraphic = undefined;
     }
     this.events.off('characterChanged');
   }

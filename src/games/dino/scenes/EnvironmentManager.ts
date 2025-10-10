@@ -169,22 +169,25 @@ export default class EnvironmentManager {
     this.decorations.setAlpha(1);
   }
 
-  update(gameSpeed: number) {
+  update(gameSpeed: number, delta: number) {
+    // Normalize movement to 60 FPS baseline
+    const deltaFactor = delta / (1000 / 60);
+
     // Update parallax scrolling with null checks
-    this.ground.tilePositionX += gameSpeed;
+    this.ground.tilePositionX += gameSpeed * deltaFactor;
 
     if (this.cloud) {
-      this.cloud.tilePositionX += gameSpeed / 50;
+      this.cloud.tilePositionX += (gameSpeed / 50) * deltaFactor;
     }
 
-    this.city1.tilePositionX += gameSpeed / 500;
+    this.city1.tilePositionX += (gameSpeed / 500) * deltaFactor;
 
     if (this.city2) {
-      this.city2.tilePositionX += gameSpeed / 500;
+      this.city2.tilePositionX += (gameSpeed / 500) * deltaFactor;
     }
 
     // Move decorations
-    Phaser.Actions.IncX(this.decorations.getChildren(), -0.5);
+    Phaser.Actions.IncX(this.decorations.getChildren(), -0.5 * deltaFactor);
 
     // Check if decorations need to be wrapped around
     this.decorations.getChildren().forEach((decoration) => {
