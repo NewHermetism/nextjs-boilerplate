@@ -1,15 +1,20 @@
-import { SOCKET_API_URL } from 'config';
+import { SOCKET_API_URL, socketTimeout } from 'config';
+import { RouteNamesEnum } from 'localConstants';
 import React, {
   createContext,
   useContext,
   useEffect,
   useRef,
-  useState
+  useState,
+  useCallback
 } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { logout } from 'helpers';
 
-const callbackUrl = `${window.location.origin}/`;
+const resolveCallbackUrl = () =>
+  typeof window !== 'undefined'
+    ? `${window.location.origin}${RouteNamesEnum.unlock}`
+    : RouteNamesEnum.unlock;
 const onRedirect = undefined; // use this to redirect with useNavigate to a specific page after logout
 const shouldAttemptReLogin = false; // use for special cases where you want to re-login after logout
 const options = {
@@ -40,14 +45,16 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const socket = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const callbackUrlRef = useRef(resolveCallbackUrl());
 
   useEffect(() => {
     // Initialize socket connection
     socket.current = io(SOCKET_API_URL, {
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
-      reconnectionDelay: 1000
+      reconnectionDelay: 1000,
+      secure: SOCKET_API_URL.startsWith('https')
     });
 
     // Handle connection events
@@ -72,7 +79,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     });
 
     socket.current.on('unauthorized', () => {
-      logout(callbackUrl, onRedirect, shouldAttemptReLogin, options);
+      logout(
+        callbackUrlRef.current,
+        onRedirect,
+        shouldAttemptReLogin,
+        options
+      );
     });
 
     // Cleanup on unmount
@@ -82,30 +94,58 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
         socket.current.off('disconnect');
         socket.current.off('error');
         socket.current.off('connect_error');
+        socket.current.off('unauthorized');
         socket.current.disconnect();
       }
     };
   }, []);
 
-  const getProfile = (accessToken: string): Promise<any> => {
-    return new Promise<boolean>((resolve, reject) => {
-      if (!socket.current) {
+  const getProfile = useCallback((accessToken: string): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      const socketInstance = socket.current;
+
+      if (!socketInstance) {
         reject(new Error('Socket not connected'));
         return;
       }
-      socket.current.emit('getProfile', {
+
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+      const cleanup = () => {
+        socketInstance.off('getProfile', handleSuccess);
+        socketInstance.off('getProfileError', handleError);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      };
+
+      const handleSuccess = (data: { profile: any }) => {
+        cleanup();
+        resolve(data.profile);
+      };
+
+      const handleError = (error: unknown) => {
+        cleanup();
+        reject(
+          error instanceof Error
+            ? error
+            : new Error('Unable to retrieve profile information')
+        );
+      };
+
+      socketInstance.on('getProfile', handleSuccess);
+      socketInstance.on('getProfileError', handleError);
+
+      timeoutId = setTimeout(() => {
+        cleanup();
+        reject(new Error('Profile request timed out'));
+      }, socketTimeout);
+
+      socketInstance.emit('getProfile', {
         accessToken
       });
-
-      socket.current.once('getProfile', (data: { profile: any }) => {
-        resolve(data.profile);
-      });
-
-      socket.current.once('getProfileError', (error) => {
-        reject(error);
-      });
     });
-  };
+  }, []);
 
   return (
     <SocketContext.Provider

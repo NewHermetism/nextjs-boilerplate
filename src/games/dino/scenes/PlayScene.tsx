@@ -16,6 +16,7 @@ import { VdashProfile } from '../vdash-utils/types/vdash/profile';
 class PlayScene extends Phaser.Scene {
   public SocketHandler: SocketHandler;
   public profile?: VdashProfile;
+  public profileLoadError = false;
   public gameId?: string;
 
   public gameSpeed: number;
@@ -83,7 +84,10 @@ class PlayScene extends Phaser.Scene {
     this.showLeaderBoard = showLeaderBoard;
     this.checkLeadearboardVisibility = checkLeadearboardVisibility;
     this.SocketHandler = new SocketHandler({ accessToken, scene: this });
-    this.SocketHandler.getProfile();
+
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => {
+      this.SocketHandler.destroy();
+    });
   }
 
   create() {
@@ -215,6 +219,10 @@ class PlayScene extends Phaser.Scene {
       this.uiManager.menuButton,
       this.uiManager.getBackButton
     );
+
+    if (this.profile) {
+      this.handleSetCharacterSelect(this.profile.selected_character);
+    }
 
     // Initialize colliders
     this.initColliders();
@@ -624,6 +632,7 @@ class PlayScene extends Phaser.Scene {
   }
 
   shutdown() {
+    this.SocketHandler?.destroy();
     if (this.updateVisibility) {
       window.removeEventListener('resize', this.updateVisibility);
       window.removeEventListener('orientationchange', this.updateVisibility);

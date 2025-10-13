@@ -5,10 +5,54 @@ import PlayScene from '../scenes/PlayScene';
 import { VdashProfile } from '../vdash-utils/types/vdash/profile';
 import { AvatarEnum } from 'vdash-utils/types';
 
+const isSecureConnection = SOCKET_API_URL.startsWith('https');
+
 export default class SocketHandler {
   scene: PlayScene;
   socket: Socket;
   accessToken: string;
+  private isDestroyed = false;
+
+  private readonly handleConnect = () => {
+    console.log('Game: Connected to server');
+    console.log('Player ID:', this.socket?.id);
+    this.scene.profileLoadError = false;
+    this.getProfile();
+  };
+
+  private readonly handleDisconnect = () => {
+    console.log('Game: Disconnected from server');
+  };
+
+  private readonly handleError = (error: unknown) => {
+    console.error('Game: Socket error:', error);
+    this.scene.profileLoadError = true;
+  };
+
+  private readonly handleConnectError = (error: unknown) => {
+    console.error('Game: Connection error:', error);
+    this.scene.profileLoadError = true;
+  };
+
+  private readonly handleUnauthorized = () => {
+    console.error('Game: Unauthorized socket response, ending session');
+    this.scene.profileLoadError = true;
+  };
+
+  private readonly handleStartGame = ({ id }: { id: string }) => {
+    this.scene.gameId = id;
+  };
+
+  private readonly handleProfile = (profile: VdashProfile) => {
+    this.scene.profile = profile;
+    this.scene.profileLoadError = false;
+    this.scene.handleSetCharacterSelect(profile.selected_character);
+  };
+
+  private readonly handleProfileError = (error: unknown) => {
+    console.error('Game: Failed to load profile', error);
+    this.scene.profileLoadError = true;
+  };
 
   constructor({
     accessToken,
@@ -21,42 +65,31 @@ export default class SocketHandler {
     this.accessToken = accessToken;
 
     this.socket = io(SOCKET_API_URL, {
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
-      reconnectionDelay: 1000
-    });
-
-    this.socket.on('connect', () => {
-      console.log('Game: Connected to server');
-      console.log('Player ID:', this.socket?.id);
-    });
-
-    this.socket.on('disconnect', () => {
-      console.log('Game: Disconnected from server');
-    });
-
-    this.socket.on('error', (error) => {
-      console.error('Game: Socket error:', error);
-    });
-
-    this.socket.on('connect_error', (error) => {
-      console.error('Game: Connection error:', error);
-    });
-
-    this.socket.on('sendVDashStartGame', ({ id }: { id: string }) => {
-      this.scene.gameId = id;
-    });
-
-    this.socket.on('getVDashProfile', (profile: VdashProfile) => {
-      this.scene.profile = profile;
-      if (!this.scene.handleSetCharacterSelect(profile.selected_character)) {
-        this.getProfile();
+      reconnectionDelay: 1000,
+      secure: isSecureConnection,
+      auth: {
+        accessToken
       }
     });
+
+    this.socket.on('connect', this.handleConnect);
+    this.socket.on('disconnect', this.handleDisconnect);
+    this.socket.on('error', this.handleError);
+    this.socket.on('connect_error', this.handleConnectError);
+    this.socket.on('unauthorized', this.handleUnauthorized);
+    this.socket.on('sendVDashStartGame', this.handleStartGame);
+    this.socket.on('getVDashProfile', this.handleProfile);
+    this.socket.on('getVDashProfileError', this.handleProfileError);
   }
 
   getProfile = () => {
+    if (this.isDestroyed) {
+      return;
+    }
+
     this.socket.emit('getVDashProfile', {
       accessToken: this.accessToken
     });
@@ -98,5 +131,22 @@ export default class SocketHandler {
       avatar: this.scene.selectedCharacterIndex
     });
     this.scene.gameId = undefined;
+  };
+
+  destroy = () => {
+    if (this.isDestroyed) {
+      return;
+    }
+
+    this.isDestroyed = true;
+    this.socket.off('connect', this.handleConnect);
+    this.socket.off('disconnect', this.handleDisconnect);
+    this.socket.off('error', this.handleError);
+    this.socket.off('connect_error', this.handleConnectError);
+    this.socket.off('unauthorized', this.handleUnauthorized);
+    this.socket.off('sendVDashStartGame', this.handleStartGame);
+    this.socket.off('getVDashProfile', this.handleProfile);
+    this.socket.off('getVDashProfileError', this.handleProfileError);
+    this.socket.disconnect();
   };
 }

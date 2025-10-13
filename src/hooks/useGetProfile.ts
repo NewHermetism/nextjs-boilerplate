@@ -10,14 +10,41 @@ export const useGetProfile = () => {
   const { getProfile } = useSocket();
 
   useEffect(() => {
-    if (tokenLogin && tokenLogin.nativeAuthToken) {
-      setIsLoading(true);
-      getProfile(tokenLogin.nativeAuthToken).then((profileRes) => {
-        setProfile(profileRes);
-        setIsLoading(false);
-      });
+    const accessToken = tokenLogin?.nativeAuthToken;
+
+    if (!isLoggedIn || !accessToken) {
+      setProfile(undefined);
+      setIsLoading(false);
+      return;
     }
-  }, [isLoggedIn, tokenLogin]);
+
+    let isCancelled = false;
+    setIsLoading(true);
+
+    getProfile(accessToken)
+      .then((profileRes) => {
+        if (isCancelled) {
+          return;
+        }
+        setProfile(profileRes);
+      })
+      .catch((error) => {
+        if (isCancelled) {
+          return;
+        }
+        console.error('[useGetProfile] Unable to load profile', error);
+        setProfile(undefined);
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [getProfile, isLoggedIn, tokenLogin?.nativeAuthToken]);
 
   return { profile, isLoading };
 };
