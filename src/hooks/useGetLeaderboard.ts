@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useSocket } from 'pages/Providers/socket';
-import { VDashScore } from 'vdash-utils/types';
+import { VDashScore } from 'types';
 
 interface UseGetLeaderboardProps {
   fetchProps?: any[];
+  shouldFetch?: boolean;
+  limit?: number;
 }
+
 export const useGetLeaderboard = ({
-  fetchProps = []
+  fetchProps = [],
+  shouldFetch = true,
+  limit = 100
 }: UseGetLeaderboardProps) => {
   const [leaderboard, setLeaderboard] = useState<VDashScore[]>([]);
   const [loading, setLoading] = useState<boolean>();
@@ -14,9 +19,11 @@ export const useGetLeaderboard = ({
   const { socket, isConnected } = useSocket();
 
   useEffect(() => {
-    if (!isConnected) return;
+    if (!isConnected || !shouldFetch) {
+      return;
+    }
 
-    const getLeaderboard = (limit: number): Promise<VDashScore[]> => {
+    const getLeaderboard = (entriesLimit: number): Promise<VDashScore[]> => {
       setLoading(true);
       return new Promise<any[]>((resolve, reject) => {
         if (!socket) {
@@ -24,7 +31,7 @@ export const useGetLeaderboard = ({
           return;
         }
         socket.emit('getLeaderboard', {
-          limit
+          limit: entriesLimit
         });
 
         socket.once('getLeaderboard', (data: any[]) => {
@@ -40,8 +47,8 @@ export const useGetLeaderboard = ({
       });
     };
 
-    getLeaderboard(100);
-  }, [isConnected, ...fetchProps]);
+    getLeaderboard(limit);
+  }, [isConnected, shouldFetch, limit, socket, ...fetchProps]);
 
   return { leaderboard, loading };
 };

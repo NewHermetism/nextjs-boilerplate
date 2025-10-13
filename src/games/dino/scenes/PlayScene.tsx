@@ -11,11 +11,11 @@ import UIManager from './UIManager';
 import { GAME_SETTINGS, SOUND_CONFIG } from './Constants';
 import SocketHandler from '../helpers/SocketHandler';
 import { isTablet, isMobile } from 'react-device-detect';
-import { VdashProfile } from '../vdash-utils/types/vdash/profile';
+import type { WalletProfile } from 'hooks/useGetProfile';
 
 class PlayScene extends Phaser.Scene {
   public SocketHandler: SocketHandler;
-  public profile?: VdashProfile;
+  public profile?: WalletProfile;
   public profileLoadError = false;
   public gameId?: string;
 
@@ -30,7 +30,36 @@ class PlayScene extends Phaser.Scene {
   private debugMenuElement?: HTMLDivElement;
   private debugCollisionButton?: HTMLButtonElement;
   private debugMenuToggleHandler?: () => void;
-  private physicsDebugGraphic?: Phaser.GameObjects.Graphics;
+  private collisionDebugGraphic?: Phaser.GameObjects.Graphics;
+  private readonly drawCollisionDebug = () => {
+    if (!this.isCollisionDebugEnabled || !this.collisionDebugGraphic) {
+      return;
+    }
+
+    const graphics = this.collisionDebugGraphic;
+    graphics.clear();
+    graphics.lineStyle(2, 0x35ff6b, 0.9);
+    graphics.fillStyle(0xff4d4d, 0.7);
+
+    const playerBody = this.dinoCharacter.body.body as Phaser.Physics.Arcade.Body;
+    if (playerBody && playerBody.enable) {
+      graphics.strokeRect(playerBody.x, playerBody.y, playerBody.width, playerBody.height);
+      graphics.fillCircle(playerBody.center.x, playerBody.center.y, 2);
+    }
+
+    const obstacles = this.obstacleManager.group.getChildren();
+    graphics.lineStyle(2, 0x4db8ff, 0.9);
+    obstacles.forEach((child) => {
+      const sprite = child as Phaser.Physics.Arcade.Sprite;
+      const body = sprite.body as Phaser.Physics.Arcade.Body | null;
+      if (!body || !body.enable) {
+        return;
+      }
+
+      graphics.strokeRect(body.x, body.y, body.width, body.height);
+      graphics.fillCircle(body.center.x, body.center.y, 2);
+    });
+  };
   private handleMuteChange = (isMuted: boolean) => {
     this.applyGlobalMute(isMuted);
   };
@@ -89,8 +118,13 @@ class PlayScene extends Phaser.Scene {
   create() {
     const { height } = this.scale;
 
-    this.sound.pauseOnBlur = false;
-    this.sound.pauseOnHide = false;
+    const soundManager = this.sound as Phaser.Sound.BaseSoundManager & {
+      pauseOnHide?: boolean;
+    };
+    soundManager.pauseOnBlur = false;
+    if (typeof soundManager.pauseOnHide === 'boolean') {
+      soundManager.pauseOnHide = false;
+    }
 
     // Initialize background music
     const initialMute = this.getInitialMuteState();
@@ -102,7 +136,7 @@ class PlayScene extends Phaser.Scene {
 
     // Load sounds
     this.hitSound = this.sound.add('hit', SOUND_CONFIG.HIT);
-    this.hitSound.setMute(this.isAudioMuted);
+    this.setSoundMute(this.hitSound, this.isAudioMuted);
 
     // Create start trigger
     this.startTrigger = this.physics.add
@@ -217,7 +251,11 @@ class PlayScene extends Phaser.Scene {
     );
 
     if (this.profile) {
-      this.handleSetCharacterSelect(this.profile.selected_character);
+      const initialCharacter =
+        typeof this.profile.selected_character === 'number'
+          ? this.profile.selected_character
+          : 0;
+      this.handleSetCharacterSelect(initialCharacter);
     }
 
     // Initialize colliders
@@ -244,23 +282,35 @@ class PlayScene extends Phaser.Scene {
 
   private applyGlobalMute(isMuted: boolean) {
     this.isAudioMuted = isMuted;
-    this.sound.setMute(isMuted);
-    this.sound.sounds.forEach((sound) => {
+    this.registry.set('audioMuted', isMuted);
+
+    const soundManager = this.sound as Phaser.Sound.BaseSoundManager & {
+      setMute?: (value: boolean) => void;
+      mute?: boolean;
+    };
+    if (typeof soundManager.setMute === 'function') {
+      soundManager.setMute(isMuted);
+    } else if (typeof soundManager.mute === 'boolean') {
+      soundManager.mute = isMuted;
+    }
+
+    const managedSounds = this.getManagedSounds();
+    managedSounds.forEach((sound) => {
       if (sound === this.backgroundMusic) {
         if (isMuted && sound.isPlaying) {
           sound.pause();
-          sound.setMute(true);
+          this.setSoundMute(sound, true);
         }
         if (!isMuted && sound.isPaused) {
-          sound.setMute(false);
+          this.setSoundMute(sound, false);
           sound.resume();
         } else if (!isMuted) {
-          sound.setMute(false);
+          this.setSoundMute(sound, false);
         }
         return;
       }
 
-      sound.setMute(isMuted);
+      this.setSoundMute(sound, isMuted);
     });
 
     if (!isMuted && this.backgroundMusic && !this.backgroundMusic.isPlaying) {
@@ -282,23 +332,32 @@ class PlayScene extends Phaser.Scene {
         volume: 0.15,
         loop: true
       });
-      this.backgroundMusic.setMute(this.isAudioMuted);
+      this.setSoundMute(this.backgroundMusic, this.isAudioMuted);
     }
 
     if (!this.backgroundMusic) return;
 
-    if (this.backgroundMusic.isPaused) {
-      this.backgroundMusic.resume();
-    } else {
-      const seekPosition = shouldReuse ? this.backgroundMusic.seek ?? 0 : 0;
-      this.backgroundMusic.stop();
-      this.backgroundMusic.play({ seek: seekPosition });
-    }
+    const backgroundSound = this.backgroundMusic as Phaser.Sound.BaseSound & {
+      seek?: number;
+    };
 
     if (this.isAudioMuted) {
-      this.backgroundMusic.pause();
-      this.backgroundMusic.setMute(true);
+      this.setSoundMute(backgroundSound, true);
+      if (backgroundSound.isPlaying || backgroundSound.isPaused) {
+        backgroundSound.stop();
+      }
+      return;
     }
+
+    if (backgroundSound.isPaused) {
+      backgroundSound.resume();
+    } else {
+      const seekPosition = shouldReuse ? backgroundSound.seek ?? 0 : 0;
+      backgroundSound.stop();
+      backgroundSound.play({ seek: seekPosition });
+    }
+
+    this.setSoundMute(backgroundSound, false);
   }
 
   private toggleDebugMenu() {
@@ -379,29 +438,61 @@ class PlayScene extends Phaser.Scene {
       : 'Show Collision Boxes';
   }
 
+  private getManagedSounds(): Phaser.Sound.BaseSound[] {
+    const manager = this.sound as Phaser.Sound.BaseSoundManager & {
+      sounds?: Phaser.Sound.BaseSound[];
+    };
+    return manager.sounds ?? [];
+  }
+
+  private setSoundMute(
+    sound: Phaser.Sound.BaseSound | undefined,
+    mute: boolean
+  ) {
+    if (!sound) {
+      return;
+    }
+
+    const soundWithMute = sound as Phaser.Sound.BaseSound & {
+      setMute?: (value: boolean) => void;
+      mute?: boolean;
+    };
+
+    if (typeof soundWithMute.setMute === 'function') {
+      soundWithMute.setMute(mute);
+    } else if (typeof soundWithMute.mute === 'boolean') {
+      soundWithMute.mute = mute;
+    }
+  }
+
   private setCollisionDebug(enabled: boolean) {
     this.isCollisionDebugEnabled = enabled;
 
     if (enabled) {
-      // Always recreate to ensure fresh state
-      if (this.physicsDebugGraphic) {
-        this.physicsDebugGraphic.destroy();
+      if (!this.collisionDebugGraphic) {
+        this.collisionDebugGraphic = this.add.graphics();
+        this.collisionDebugGraphic.setDepth(10000);
+        this.collisionDebugGraphic.setScrollFactor(0);
       }
 
-      this.physicsDebugGraphic = this.add.graphics();
-      this.physicsDebugGraphic.setDepth(10000);
-
-      // Enable debug mode
-      this.physics.world.drawDebug = true;
-      this.physics.world.debugGraphic = this.physicsDebugGraphic;
+      this.events.on(
+        Phaser.Scenes.Events.POST_UPDATE,
+        this.drawCollisionDebug,
+        this
+      );
+      this.drawCollisionDebug();
     } else {
-      this.physics.world.drawDebug = false;
-      if (this.physicsDebugGraphic) {
-        this.physicsDebugGraphic.clear();
-        this.physicsDebugGraphic.destroy();
-        this.physicsDebugGraphic = undefined;
+      this.events.off(
+        Phaser.Scenes.Events.POST_UPDATE,
+        this.drawCollisionDebug,
+        this
+      );
+
+      if (this.collisionDebugGraphic) {
+        this.collisionDebugGraphic.clear();
+        this.collisionDebugGraphic.destroy();
+        this.collisionDebugGraphic = undefined;
       }
-      this.physics.world.debugGraphic = undefined;
     }
 
     this.updateCollisionButtonLabel();
@@ -413,50 +504,6 @@ class PlayScene extends Phaser.Scene {
     }
     this.debugMenuElement = undefined;
     this.debugCollisionButton = undefined;
-  }
-
-  private refreshCollisionDebug() {
-    if (!this.isCollisionDebugEnabled || !this.physicsDebugGraphic) {
-      return;
-    }
-
-    // Clear previous frame
-    this.physicsDebugGraphic.clear();
-
-    // Set line style once
-    this.physicsDebugGraphic.lineStyle(1, 0x00ff00, 1);
-
-    // Draw character body
-    const playerBody = this.dinoCharacter.body.body as Phaser.Physics.Arcade.Body;
-    if (playerBody && playerBody.enable) {
-      this.physicsDebugGraphic.strokeRect(
-        playerBody.x,
-        playerBody.y,
-        playerBody.width,
-        playerBody.height
-      );
-    }
-
-    // Draw obstacle bodies
-    const obstacles = this.obstacleManager.group.getChildren();
-    for (let i = 0; i < obstacles.length; i++) {
-      const sprite = obstacles[i] as Phaser.Physics.Arcade.Sprite;
-      const body = sprite.body as Phaser.Physics.Arcade.Body;
-      if (body && body.enable) {
-        this.physicsDebugGraphic.strokeRect(
-          body.x,
-          body.y,
-          body.width,
-          body.height
-        );
-      }
-    }
-
-    // Draw center points
-    this.physicsDebugGraphic.fillStyle(0xff0000, 1);
-    if (playerBody && playerBody.enable) {
-      this.physicsDebugGraphic.fillCircle(playerBody.center.x, playerBody.center.y, 3);
-    }
   }
 
   setupOrientationCheck() {
@@ -605,9 +652,8 @@ class PlayScene extends Phaser.Scene {
 
   update(time: number, delta: number): void {
     if (!this.isGameRunning || !this.gameId) {
-      // Still update debug visualization even when game is not running
       if (this.isCollisionDebugEnabled) {
-        this.refreshCollisionDebug();
+        this.drawCollisionDebug();
       }
       return;
     }
@@ -623,7 +669,7 @@ class PlayScene extends Phaser.Scene {
 
     // Update debug visualization last (only if enabled)
     if (this.isCollisionDebugEnabled) {
-      this.refreshCollisionDebug();
+      this.drawCollisionDebug();
     }
   }
 
@@ -642,10 +688,6 @@ class PlayScene extends Phaser.Scene {
       this.setCollisionDebug(false);
     }
     this.destroyDebugMenu();
-    if (this.physicsDebugGraphic) {
-      this.physicsDebugGraphic.destroy();
-      this.physicsDebugGraphic = undefined;
-    }
     this.events.off('characterChanged');
   }
 }

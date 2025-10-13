@@ -64,8 +64,9 @@ export const Game = () => {
     };
   }, [tokenLogin?.nativeAuthToken]);
 
-  const { leaderboard } = useGetLeaderboard({
-    fetchProps: [isLeaderboardOpen]
+  const { leaderboard, loading } = useGetLeaderboard({
+    fetchProps: [isLeaderboardOpen],
+    shouldFetch: isLeaderboardOpen
   });
 
   return (
@@ -76,6 +77,7 @@ export const Game = () => {
           isOpen={isLeaderboardOpen}
           onClose={() => setIsLeaderboardOpen(false)}
           leaderboard={leaderboard}
+          loading={loading}
         />
         <div
           id='phaser-game'

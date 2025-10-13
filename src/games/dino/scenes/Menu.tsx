@@ -89,6 +89,16 @@ class Menu extends Phaser.GameObjects.Container {
       this.musicButton
     ]);
 
+    const storedMuted = this.scene.registry.get('audioMuted');
+    if (typeof storedMuted === 'boolean') {
+      this.isMusicOn = !storedMuted;
+    } else {
+      this.scene.registry.set('audioMuted', false);
+      this.isMusicOn = true;
+    }
+
+    this.updateMusicState(this.isMusicOn, { emitEvent: false, syncSound: false });
+
     this.handleInputs();
     this.setDepth(2);
     // Add items
@@ -133,15 +143,34 @@ class Menu extends Phaser.GameObjects.Container {
   }
 
   private toggleMusic() {
-    this.isMusicOn = !this.isMusicOn;
-    const scene = this.scene as Phaser.Scene;
+    this.updateMusicState(!this.isMusicOn);
+  }
 
-    if (this.isMusicOn) {
-      this.musicButton.setTexture('music_on');
-      scene.sound.resumeAll();
-    } else {
-      this.musicButton.setTexture('music_off');
-      scene.sound.pauseAll();
+  private updateMusicState(
+    isOn: boolean,
+    options: { emitEvent?: boolean; syncSound?: boolean } = {}
+  ) {
+    const { emitEvent = true, syncSound = true } = options;
+
+    this.isMusicOn = isOn;
+    const isMuted = !isOn;
+
+    if (this.musicButton) {
+      this.musicButton.setTexture(isOn ? 'music_on' : 'music_off');
+    }
+
+    this.scene.registry.set('audioMuted', isMuted);
+
+    if (syncSound) {
+      if (isOn) {
+        this.scene.sound.resumeAll();
+      } else {
+        this.scene.sound.pauseAll();
+      }
+    }
+
+    if (emitEvent) {
+      this.scene.game.events.emit('audio:mute-changed', isMuted);
     }
   }
 }

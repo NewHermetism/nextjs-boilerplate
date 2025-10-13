@@ -3,6 +3,7 @@ export * from './profile.types';
 export * from './widget.types';
 export * from './sdkCoreTypes';
 export * from './transaction.types';
+export * from './vdash.types';
 
 export interface SvgProps {
   width?: string;

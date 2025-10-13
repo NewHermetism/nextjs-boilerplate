@@ -1,9 +1,11 @@
 import { SOCKET_API_URL } from 'config';
 import { io, Socket } from 'socket.io-client';
-import { EventType } from 'types';
+import { EventType, AvatarEnum } from 'types';
 import PlayScene from '../scenes/PlayScene';
-import { VdashProfile } from '../vdash-utils/types/vdash/profile';
-import { AvatarEnum } from 'vdash-utils/types';
+import {
+  normalizeWalletProfile,
+  type WalletProfile
+} from 'hooks/useGetProfile';
 
 const isSecureConnection = SOCKET_API_URL.startsWith('https');
 
@@ -43,10 +45,15 @@ export default class SocketHandler {
     this.scene.gameId = id;
   };
 
-  private readonly handleProfile = (profile: VdashProfile) => {
-    this.scene.profile = profile;
+  private readonly handleProfile = (profile: unknown) => {
+    const normalized = normalizeWalletProfile(profile);
+    this.scene.profile = normalized;
     this.scene.profileLoadError = false;
-    this.scene.handleSetCharacterSelect(profile.selected_character);
+    const characterIndex =
+      normalized && typeof normalized.selected_character === 'number'
+        ? normalized.selected_character
+        : 0;
+    this.scene.handleSetCharacterSelect(characterIndex);
   };
 
   private readonly handleProfileError = (error: unknown) => {

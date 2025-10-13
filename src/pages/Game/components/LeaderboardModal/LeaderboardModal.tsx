@@ -1,22 +1,68 @@
 import { displayAddress } from 'utils/display/address';
-import { VDashScore } from '../../../../games/dino/vdash-utils/types';
+import { VDashScore } from 'types';
 import { useIsMobile } from 'utils/useIsMobile';
+
 interface LeaderboardModalProps {
   isOpen: boolean;
   onClose: () => void;
   leaderboard: VDashScore[];
+  loading?: boolean;
 }
 
 export const LeaderboardModal = ({
   isOpen,
   onClose,
-  leaderboard
+  leaderboard,
+  loading = false
 }: LeaderboardModalProps) => {
   if (!isOpen) return null;
   const { isMobile } = useIsMobile();
 
   const handleCopy = (address: string) => {
     navigator.clipboard.writeText(address);
+  };
+
+  const renderBody = () => {
+    if (loading) {
+      return (
+        <tr className='bg-transparent'>
+          <td colSpan={5} className='py-8 text-center text-white text-lg'>
+            Loading leaderboard...
+          </td>
+        </tr>
+      );
+    }
+
+    if (!leaderboard.length) {
+      return (
+        <tr className='bg-transparent'>
+          <td colSpan={5} className='py-8 text-center text-white text-lg'>
+            No leaderboard data available yet.
+          </td>
+        </tr>
+      );
+    }
+
+    return leaderboard.map(({ avatar, player_address, reward, score }, index) => (
+      <tr key={player_address} className='bg-[#6ED0E0] rounded'>
+        <td className='py-2 px-4'>{index + 1}</td>
+        <td className='py-2 px-4'>
+          <img
+            src={`/images/head_${avatar + 1}.png`}
+            alt={`Character ${avatar}`}
+            className='mx-auto h-8 w-8 object-contain'
+          />
+        </td>
+        <td
+          className='py-2 px-4 cursor-pointer'
+          onClick={() => handleCopy(player_address)}
+        >
+          {displayAddress(player_address)}
+        </td>
+        <td className='py-2 px-4'>{score}</td>
+        <td className='py-2 px-4'>{reward}</td>
+      </tr>
+    ));
   };
 
   return (
@@ -47,28 +93,7 @@ export const LeaderboardModal = ({
             </tr>
           </thead>
           <tbody>
-            {leaderboard.map(
-              ({ avatar, player_address, reward, score }, index) => (
-                <tr key={index} className='bg-[#6ED0E0] rounded'>
-                  <td className='py-2 px-4'>{index + 1}</td>
-                  <td className='py-2 px-4'>
-                    <img
-                      src={`/images/head_${avatar + 1}.png`}
-                      alt={`Character ${avatar}`}
-                      className='mx-auto h-8 w-8 object-contain'
-                    />
-                  </td>
-                  <td
-                    className='py-2 px-4 cursor-pointer'
-                    onClick={() => handleCopy(player_address)}
-                  >
-                    {displayAddress(player_address)}
-                  </td>
-                  <td className='py-2 px-4'>{score}</td>
-                  <td className='py-2 px-4'>{reward}</td>
-                </tr>
-              )
-            )}
+            {renderBody()}
           </tbody>
         </table>
       </div>

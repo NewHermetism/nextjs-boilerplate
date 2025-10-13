@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SuperVictor Hitbox Reference</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: 'Segoe UI', Roboto, sans-serif;
+        background: #0e122c;
+        color: #f5f6fb;
+      }
+
+      body {
+        margin: 32px;
+        max-width: 1200px;
+      }
+
+      h1 {
+        margin-bottom: 0.25rem;
+        font-size: 2.5rem;
+      }
+
+      p {
+        margin-top: 0;
+        max-width: 760px;
+        color: #cfd4ff;
+      }
+
+      .legend {
+        display: inline-flex;
+        gap: 12px;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.06);
+        padding: 8px 16px;
+        border-radius: 12px;
+        margin: 16px 0 32px;
+        font-size: 0.9rem;
+      }
+
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .swatch {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+      }
+
+      section {
+        margin-bottom: 48px;
+      }
+
+      section h2 {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 8px;
+        margin-bottom: 16px;
+        font-size: 1.6rem;
+      }
+
+      .asset-card {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 24px;
+      }
+
+      .asset-title {
+        margin: 0 0 12px;
+        font-size: 1.2rem;
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .frames {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 18px;
+      }
+
+      .frame-card {
+        background: rgba(19, 24, 52, 0.66);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 14px;
+        padding: 12px;
+      }
+
+      canvas {
+        display: block;
+        margin: 0 auto 8px;
+        background: rgba(10, 12, 26, 0.9);
+        border-radius: 8px;
+        image-rendering: pixelated;
+      }
+
+      .metrics {
+        font-size: 0.78rem;
+        line-height: 1.4;
+        color: #b5b8dc;
+      }
+
+      .metrics strong {
+        color: #fff;
+        font-weight: 600;
+      }
+
+      .error {
+        color: #ff8aa0;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>SuperVictor Hitbox Reference</h1>
+    <p>
+      This standalone viewer loads the sprite sheets and obstacle textures used by the
+      SuperVictor runner and overlays their detected collision bounds. It mirrors the
+      runtime logic from <code>ObstacleManager</code> and <code>PlayScene</code>, using pixel
+      alpha data plus the custom padding rules that ship with the game.
+    </p>
+    <div class="legend">
+      <span><span class="swatch" style="background:#facc15"></span>Raw alpha bounds</span>
+      <span><span class="swatch" style="background:#ff4d4d"></span>Final collider</span>
+    </div>
+    <div id="root"></div>
+
+    <script>
+      const SCALE = 3;
+      const ALPHA_THRESHOLD = 16;
+
+      const DEFAULT_BODY_METRICS = {
+        widthRatio: 0.85,
+        heightRatio: 0.85,
+        offsetXRatio: 0.075,
+        offsetYRatio: 0.075,
+        anchor: 'top'
+      };
+
+      const OBSTACLE_BODY_CONFIG = {
+        'obsticle-small': {
+          scale: 1.8,
+          autoPadding: { top: 6, left: 6, right: 6, bottom: 2 }
+        },
+        'obsticle-big': {
+          scale: 1.8,
+          autoPadding: { top: 6, left: 10, right: 10, bottom: 2 }
+        },
+        'enemy-seringe': {
+          scale: 1.2,
+          autoPadding: { all: 4 },
+          body: { anchor: 'center' }
+        },
+        'enemy-lava': {
+          scale: 1.4,
+          autoPadding: { left: 12, right: 12, top: 8, bottom: 12 }
+        },
+        'enemy-bone': {
+          scale: 1.3,
+          autoPadding: { all: 4 },
+          body: { anchor: 'center' }
+        },
+        'enemy-boss': {
+          scale: 1,
+          flipX: true,
+          autoPadding: { left: 18, right: 24, top: 12 }
+        },
+        'enemy-white': {
+          scale: 1,
+          flipX: true,
+          autoPadding: { left: 12, right: 18, top: 10 }
+        },
+        'enemy-blue': {
+          scale: 1,
+          flipX: true,
+          autoPadding: { left: 10, right: 16, top: 10 }
+        },
+        'enemy-fireball': {
+          scale: 1.3,
+          autoPadding: { all: 6 },
+          body: { anchor: 'center' }
+        },
+        'enemy-toxic-waste': {
+          scale: 1.5,
+          autoPadding: { left: 14, right: 14, top: 10, bottom: 10 }
+        }
+      };
+
+      const assets = [
+        {
+          category: 'Characters',
+          name: 'Pijamas (running)',
+          key: 'running_pijamas',
+          src: '/assets/characters/pijamas/running_pijamas.png',
+          frameWidth: 80,
+          frameHeight: 100
+        },
+        {
+          category: 'Characters',
+          name: 'Boss (running)',
+          key: 'running_boss',
+          src: '/assets/characters/mini_boss/running.png',
+          frameWidth: 123,
+          frameHeight: 117
+        },
+        {
+          category: 'Characters',
+          name: 'Blue (running)',
+          key: 'running_blue',
+          src: '/assets/characters/blue/blue_run.png',
+          frameWidth: 60,
+          frameHeight: 100
+        },
+        {
+          category: 'Obstacles',
+          name: 'Spikes (small)',
+          key: 'obsticle-small',
+          textureKey: 'spikes_small',
+          src: '/assets/objects/spikes/spikes_small.png'
+        },
+        {
+          category: 'Obstacles',
+          name: 'Spikes (large)',
+          key: 'obsticle-big',
+          textureKey: 'spikes_big',
+          src: '/assets/objects/spikes/spikes_big.png'
+        },
+        {
+          category: 'Obstacles',
+          name: 'Seringe',
+          key: 'enemy-seringe',
+          textureKey: 'seringe',
+          src: '/assets/objects/seringe/seringe.png',
+          frameWidth: 49,
+          frameHeight: 34
+        },
+        {
+          category: 'Obstacles',
+          name: 'Lava',
+          key: 'enemy-lava',
+          textureKey: 'lava',
+          src: '/assets/objects/lava/lava.png',
+          frameWidth: 68,
+          frameHeight: 38
+        },
+        {
+          category: 'Obstacles',
+          name: 'Bone',
+          key: 'enemy-bone',
+          textureKey: 'bone',
+          src: '/assets/objects/bone/bone.png',
+          frameWidth: 36,
+          frameHeight: 35
+        },
+        {
+          category: 'Obstacles',
+          name: 'Toxic waste',
+          key: 'enemy-toxic-waste',
+          textureKey: 'toxic-waste',
+          src: '/assets/objects/toxic_waste/toxic_waste.png',
+          frameWidth: 65,
+          frameHeight: 56
+        },
+        {
+          category: 'Obstacles',
+          name: 'Energy orb',
+          key: 'enemy-fireball',
+          textureKey: 'energy',
+          src: '/assets/objects/energy/energy.png',
+          frameWidth: 44,
+          frameHeight: 26
+        }
+      ];
+
+      function resolvePadding(padding = {}) {
+        const all = padding.all ?? 0;
+        const padX = padding.x ?? all;
+        const padY = padding.y ?? all;
+        return {
+          left: Math.max(padding.left ?? padX, 0),
+          right: Math.max(padding.right ?? padX, 0),
+          top: Math.max(padding.top ?? padY, 0),
+          bottom: Math.max(padding.bottom ?? padY, 0)
+        };
+      }
+
+      function loadImage(src) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error('Failed to load ' + src));
+          img.src = src;
+        });
+      }
+
+      function drawFrameToCanvas(image, sx, sy, sw, sh) {
+        const canvas = document.createElement('canvas');
+        canvas.width = sw;
+        canvas.height = sh;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(image, sx, sy, sw, sh, 0, 0, sw, sh);
+        return { canvas, ctx };
+      }
+
+      function getRawBounds(imageData) {
+        const { width, height, data } = imageData;
+        let minX = width;
+        let minY = height;
+        let maxX = -1;
+        let maxY = -1;
+
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            const idx = (y * width + x) * 4 + 3;
+            const alpha = data[idx];
+            if (alpha > ALPHA_THRESHOLD) {
+              if (x < minX) minX = x;
+              if (y < minY) minY = y;
+              if (x > maxX) maxX = x;
+              if (y > maxY) maxY = y;
+            }
+          }
+        }
+
+        if (maxX === -1 || maxY === -1) {
+          return {
+            minX: 0,
+            minY: 0,
+            maxX: width - 1,
+            maxY: height - 1
+          };
+        }
+
+        return { minX, minY, maxX, maxY };
+      }
+
+      function boundsToRect(bounds) {
+        return {
+          x: bounds.minX,
+          y: bounds.minY,
+          width: bounds.maxX - bounds.minX + 1,
+          height: bounds.maxY - bounds.minY + 1
+        };
+      }
+
+      function mergeWithConfig(baseMetrics, configBody = {}) {
+        return {
+          ...DEFAULT_BODY_METRICS,
+          ...baseMetrics,
+          ...configBody
+        };
+      }
+
+      function computeObstacleCollider(frameWidth, frameHeight, bounds, config) {
+        const padding = resolvePadding(config?.autoPadding);
+
+        let minX = Math.max(bounds.minX + padding.left, 0);
+        let minY = Math.max(bounds.minY + padding.top, 0);
+        let maxX = Math.min(bounds.maxX - padding.right, frameWidth - 1);
+        let maxY = Math.min(bounds.maxY - padding.bottom, frameHeight - 1);
+
+        if (minX > maxX || minY > maxY) {
+          minX = 0;
+          minY = 0;
+          maxX = frameWidth - 1;
+          maxY = frameHeight - 1;
+        }
+
+        const widthPx = Math.max(maxX - minX + 1, 1);
+        const heightPx = Math.max(maxY - minY + 1, 1);
+
+        const autoMetrics = {
+          widthRatio: widthPx / frameWidth,
+          heightRatio: heightPx / frameHeight,
+          offsetXRatio: minX / frameWidth,
+          offsetYRatio: minY / frameHeight
+        };
+
+        const merged = mergeWithConfig(autoMetrics, config?.body);
+
+        const colliderWidth = merged.widthRatio * frameWidth;
+        const colliderHeight = merged.heightRatio * frameHeight;
+        const offsetX = (merged.offsetXRatio ?? 0) * frameWidth;
+        const bottomPaddingRatio = merged.bottomPaddingRatio ?? 0;
+        const offsetYRatio = merged.offsetYRatio ?? 0;
+
+        let offsetY;
+        switch (merged.anchor ?? 'top') {
+          case 'bottom':
+            offsetY = frameHeight - colliderHeight - frameHeight * bottomPaddingRatio;
+            break;
+          case 'center':
+            offsetY = frameHeight / 2 - colliderHeight / 2 + frameHeight * offsetYRatio;
+            break;
+          default:
+            offsetY = frameHeight * offsetYRatio;
+            break;
+        }
+
+        return {
+          x: offsetX,
+          y: offsetY,
+          width: colliderWidth,
+          height: colliderHeight
+        };
+      }
+
+      function drawVisualization(container, frameCanvas, rawRect, finalRect) {
+        const displayCanvas = document.createElement('canvas');
+        displayCanvas.width = frameCanvas.width * SCALE;
+        displayCanvas.height = frameCanvas.height * SCALE;
+        const dctx = displayCanvas.getContext('2d');
+        dctx.imageSmoothingEnabled = false;
+        dctx.drawImage(
+          frameCanvas,
+          0,
+          0,
+          frameCanvas.width,
+          frameCanvas.height,
+          0,
+          0,
+          displayCanvas.width,
+          displayCanvas.height
+        );
+
+        if (rawRect) {
+          dctx.strokeStyle = '#facc15';
+          dctx.lineWidth = 2;
+          dctx.strokeRect(
+            rawRect.x * SCALE + 0.5,
+            rawRect.y * SCALE + 0.5,
+            rawRect.width * SCALE,
+            rawRect.height * SCALE
+          );
+        }
+
+        if (finalRect) {
+          dctx.strokeStyle = '#ff4d4d';
+          dctx.lineWidth = 2;
+          dctx.strokeRect(
+            finalRect.x * SCALE + 0.5,
+            finalRect.y * SCALE + 0.5,
+            finalRect.width * SCALE,
+            finalRect.height * SCALE
+          );
+        }
+
+        container.appendChild(displayCanvas);
+      }
+
+      function formatRect(title, rect) {
+        if (!rect) return '';
+        return `${title}: x=${rect.x.toFixed(1)}, y=${rect.y.toFixed(1)}, w=${rect.width.toFixed(1)}, h=${rect.height.toFixed(1)}`;
+      }
+
+      async function build() {
+        const root = document.getElementById('root');
+
+        const grouped = new Map();
+        assets.forEach((asset) => {
+          if (!grouped.has(asset.category)) {
+            grouped.set(asset.category, []);
+          }
+          grouped.get(asset.category).push(asset);
+        });
+
+        for (const [category, items] of grouped.entries()) {
+          const section = document.createElement('section');
+          const title = document.createElement('h2');
+          title.textContent = category;
+          section.appendChild(title);
+
+          for (const asset of items) {
+            const card = document.createElement('div');
+            card.className = 'asset-card';
+
+            const header = document.createElement('div');
+            header.className = 'asset-title';
+            header.innerHTML = `<span>${asset.name}</span><span style="font-size:0.85rem;color:#8f95c1">${asset.src}</span>`;
+            card.appendChild(header);
+
+            const framesWrapper = document.createElement('div');
+            framesWrapper.className = 'frames';
+            card.appendChild(framesWrapper);
+
+            try {
+              const image = await loadImage(asset.src);
+              const frameWidth = asset.frameWidth || image.width;
+              const frameHeight = asset.frameHeight || image.height;
+              const framesAcross = Math.max(1, Math.floor(image.width / frameWidth));
+              const framesDown = Math.max(1, Math.floor(image.height / frameHeight));
+              const totalFrames = framesAcross * framesDown;
+
+              let globalBounds = {
+                minX: frameWidth,
+                minY: frameHeight,
+                maxX: -1,
+                maxY: -1
+              };
+
+              const frameRects = [];
+
+              for (let index = 0; index < totalFrames; index += 1) {
+                const col = index % framesAcross;
+                const row = Math.floor(index / framesAcross);
+                const sx = col * frameWidth;
+                const sy = row * frameHeight;
+
+                const { canvas, ctx } = drawFrameToCanvas(
+                  image,
+                  sx,
+                  sy,
+                  frameWidth,
+                  frameHeight
+                );
+                const imageData = ctx.getImageData(0, 0, frameWidth, frameHeight);
+                const bounds = getRawBounds(imageData);
+
+                if (bounds.minX < globalBounds.minX) globalBounds.minX = bounds.minX;
+                if (bounds.minY < globalBounds.minY) globalBounds.minY = bounds.minY;
+                if (bounds.maxX > globalBounds.maxX) globalBounds.maxX = bounds.maxX;
+                if (bounds.maxY > globalBounds.maxY) globalBounds.maxY = bounds.maxY;
+
+                frameRects.push({ index, canvas, bounds });
+              }
+
+              if (globalBounds.maxX === -1) {
+                globalBounds = {
+                  minX: 0,
+                  minY: 0,
+                  maxX: frameWidth - 1,
+                  maxY: frameHeight - 1
+                };
+              }
+
+              const finalCollider =
+                category === 'Obstacles'
+                  ? computeObstacleCollider(
+                      frameWidth,
+                      frameHeight,
+                      globalBounds,
+                      OBSTACLE_BODY_CONFIG[asset.key]
+                    )
+                  : null;
+
+              frameRects.forEach(({ index, canvas, bounds }) => {
+                const frameCard = document.createElement('div');
+                frameCard.className = 'frame-card';
+
+                const rawRect = boundsToRect(bounds);
+                drawVisualization(frameCard, canvas, rawRect, finalCollider);
+
+                const meta = document.createElement('div');
+                meta.className = 'metrics';
+                const lines = [
+                  `<strong>Frame ${index + 1}</strong> (${frameWidth}×${frameHeight})`,
+                  formatRect('Alpha bounds', rawRect)
+                ];
+                if (finalCollider) {
+                  lines.push(formatRect('Final collider', finalCollider));
+                }
+                meta.innerHTML = lines.filter(Boolean).join('<br />');
+                frameCard.appendChild(meta);
+
+                framesWrapper.appendChild(frameCard);
+              });
+            } catch (error) {
+              const err = document.createElement('div');
+              err.className = 'error';
+              err.textContent = error.message;
+              card.appendChild(err);
+            }
+
+            section.appendChild(card);
+          }
+
+          root.appendChild(section);
+        }
+      }
+
+      build();
+    </script>
+  </body>
+</html>

@@ -1,6 +1,7 @@
 // CharacterModal.tsx
 import Phaser from 'phaser';
 import PlayScene from './PlayScene';
+import type { AvatarEnum } from 'types';
 
 class CharacterModal extends Phaser.GameObjects.Container {
   public scene: PlayScene;
@@ -140,9 +141,10 @@ class CharacterModal extends Phaser.GameObjects.Container {
   }
 
   selectCharacter(index: number) {
-    this.scene.SocketHandler.setVDashSelectedCharacter(index);
+    const avatarIndex = Math.max(0, Math.min(index, 2)) as AvatarEnum;
+    this.scene.SocketHandler.setVDashSelectedCharacter(avatarIndex);
 
-    this.scene.handleSetCharacterSelect(index);
+    this.scene.handleSetCharacterSelect(avatarIndex);
   }
 
   public setLockedCharacters(indexes: number[]) {

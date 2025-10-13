@@ -8,125 +8,82 @@ interface RectBodyConfig {
   widthRatio: number;
   heightRatio: number;
   offsetXRatio?: number;
-  bottomPaddingRatio?: number;
   offsetYRatio?: number;
+  bottomPaddingRatio?: number;
   anchor?: BodyAnchor;
+}
+
+interface AutoPaddingConfig {
+  all?: number;
+  x?: number;
+  y?: number;
+  top?: number;
+  bottom?: number;
+  left?: number;
+  right?: number;
 }
 
 interface ObstacleBodyConfig {
   scale?: number;
   flipX?: boolean;
-  body: RectBodyConfig;
+  body?: Partial<RectBodyConfig>;
+  autoPadding?: AutoPaddingConfig;
 }
 
-const DEFAULT_OBSTACLE_BODY: ObstacleBodyConfig = {
-  body: {
-    widthRatio: 0.8,
-    heightRatio: 0.8,
-    offsetXRatio: 0.1,
-    anchor: 'bottom'
-  }
+const DEFAULT_BODY_METRICS: RectBodyConfig = {
+  widthRatio: 0.85,
+  heightRatio: 0.85,
+  offsetXRatio: 0.075,
+  offsetYRatio: 0.075,
+  anchor: 'top'
 };
 
 const OBSTACLE_BODY_CONFIG: Record<string, ObstacleBodyConfig> = {
   'obsticle-small': {
     scale: 1.8,
-    body: {
-      widthRatio: 0.8,
-      heightRatio: 0.55,
-      offsetXRatio: 0.1,
-      bottomPaddingRatio: 0.05,
-      anchor: 'bottom'
-    }
+    autoPadding: { top: 6, left: 6, right: 6, bottom: 2 }
   },
   'obsticle-big': {
     scale: 1.8,
-    body: {
-      widthRatio: 0.75,
-      heightRatio: 0.65,
-      offsetXRatio: 0.12,
-      bottomPaddingRatio: 0.05,
-      anchor: 'bottom'
-    }
+    autoPadding: { top: 6, left: 10, right: 10, bottom: 2 }
   },
   'enemy-seringe': {
     scale: 1.2,
-    body: {
-      widthRatio: 0.8,
-      heightRatio: 0.5,
-      offsetXRatio: 0.1,
-      offsetYRatio: 0.05,
-      anchor: 'center'
-    }
+    autoPadding: { all: 4 },
+    body: { anchor: 'center' }
   },
   'enemy-lava': {
     scale: 1.4,
-    body: {
-      widthRatio: 0.60,  // Only bubbling lava center
-      heightRatio: 0.40,  // Danger zone of bubbling lava
-      offsetXRatio: 0.20,  // Center the danger zone
-      bottomPaddingRatio: 0.25,  // Leave space at bottom for ground
-      anchor: 'bottom'
-    }
+    autoPadding: { left: 12, right: 12, top: 8, bottom: 12 }
   },
   'enemy-bone': {
     scale: 1.3,
-    body: {
-      widthRatio: 0.48,
-      heightRatio: 0.48,
-      offsetXRatio: 0.26,
-      anchor: 'center'
-    }
+    autoPadding: { all: 4 },
+    body: { anchor: 'center' }
   },
   'enemy-boss': {
     scale: 1,
     flipX: true,
-    body: {
-      widthRatio: 0.45,
-      heightRatio: 0.7,
-      offsetXRatio: 0.28,
-      anchor: 'bottom'
-    }
+    autoPadding: { left: 18, right: 24, top: 12 }
   },
   'enemy-white': {
     scale: 1,
     flipX: true,
-    body: {
-      widthRatio: 0.45,
-      heightRatio: 0.65,
-      offsetXRatio: 0.28,
-      anchor: 'bottom'
-    }
+    autoPadding: { left: 12, right: 18, top: 10 }
   },
   'enemy-blue': {
     scale: 1,
     flipX: true,
-    body: {
-      widthRatio: 0.5,
-      heightRatio: 0.65,
-      offsetXRatio: 0.25,
-      anchor: 'bottom'
-    }
+    autoPadding: { left: 10, right: 16, top: 10 }
   },
   'enemy-fireball': {
     scale: 1.3,
-    body: {
-      widthRatio: 0.42,
-      heightRatio: 0.38,
-      offsetXRatio: 0.29,
-      offsetYRatio: 0.02,
-      anchor: 'center'
-    }
+    autoPadding: { all: 6 },
+    body: { anchor: 'center' }
   },
   'enemy-toxic-waste': {
     scale: 1.5,
-    body: {
-      widthRatio: 0.55,  // Main barrel body only
-      heightRatio: 0.50,  // Barrel + toxic liquid
-      offsetXRatio: 0.22,  // Center the barrel
-      bottomPaddingRatio: 0.15,  // Leave space at bottom
-      anchor: 'bottom'
-    }
+    autoPadding: { left: 14, right: 14, top: 10, bottom: 10 }
   }
 };
 
@@ -135,6 +92,7 @@ export default class ObstacleManager {
   private obstacles: Phaser.Physics.Arcade.Group;
   private respawnTime: number = 0;
   private onGroundPosition: number;
+  private readonly autoBodyCache = new Map<string, RectBodyConfig>();
 
   constructor(scene: PlayScene) {
     this.scene = scene;
@@ -270,16 +228,22 @@ export default class ObstacleManager {
     obstacle: Phaser.Physics.Arcade.Sprite,
     type: string
   ) {
-    const config = OBSTACLE_BODY_CONFIG[type] || DEFAULT_OBSTACLE_BODY;
+    const config = OBSTACLE_BODY_CONFIG[type];
 
-    obstacle.setScale(config.scale ?? 1);
+    obstacle.setScale(config?.scale ?? 1);
 
-    if (typeof config.flipX === 'boolean') {
+    if (typeof config?.flipX === 'boolean') {
       obstacle.setFlipX(config.flipX);
     }
 
     const body = obstacle.body as Phaser.Physics.Arcade.Body | null;
     if (!body) return;
+
+    const metrics = this.resolveBodyMetrics(obstacle.texture.key, config);
+    const mergedMetrics: RectBodyConfig = {
+      ...metrics,
+      ...(config?.body ?? {})
+    };
 
     const displayWidth = obstacle.displayWidth;
     const displayHeight = obstacle.displayHeight;
@@ -288,24 +252,24 @@ export default class ObstacleManager {
       widthRatio,
       heightRatio,
       offsetXRatio = 0,
-      bottomPaddingRatio = 0,
       offsetYRatio = 0,
-      anchor = 'bottom'
-    } = config.body;
+      bottomPaddingRatio = 0,
+      anchor = 'top'
+    } = mergedMetrics;
 
-    const bodyWidth = displayWidth * widthRatio;
-    const bodyHeight = displayHeight * heightRatio;
+    const bodyWidth = Math.max(displayWidth * widthRatio, 1);
+    const bodyHeight = Math.max(displayHeight * heightRatio, 1);
     const offsetX = displayWidth * offsetXRatio;
 
-    let offsetY = 0;
-
-    if (anchor === 'top') {
-      offsetY = displayHeight * offsetYRatio;
+    let offsetY: number;
+    if (anchor === 'bottom') {
+      offsetY =
+        displayHeight - bodyHeight - displayHeight * Math.max(bottomPaddingRatio, 0);
     } else if (anchor === 'center') {
-      offsetY = displayHeight / 2 - bodyHeight / 2 + displayHeight * offsetYRatio;
+      offsetY =
+        displayHeight / 2 - bodyHeight / 2 + displayHeight * offsetYRatio;
     } else {
-      // bottom anchor (default)
-      offsetY = displayHeight - bodyHeight - displayHeight * bottomPaddingRatio;
+      offsetY = displayHeight * offsetYRatio;
     }
 
     body.setSize(bodyWidth, bodyHeight);
@@ -357,5 +321,96 @@ export default class ObstacleManager {
   reset() {
     this.obstacles.clear(true, true);
     this.respawnTime = 0;
+  }
+
+  private resolveBodyMetrics(
+    textureKey: string,
+    config?: ObstacleBodyConfig
+  ): RectBodyConfig {
+    const cached = this.autoBodyCache.get(textureKey);
+    if (cached) {
+      return cached;
+    }
+
+    const texture = this.scene.textures.get(textureKey);
+    if (!texture) {
+      this.autoBodyCache.set(textureKey, DEFAULT_BODY_METRICS);
+      return DEFAULT_BODY_METRICS;
+    }
+
+    const frames = Object.values(texture.frames).filter(Boolean);
+
+    if (frames.length === 0) {
+      this.autoBodyCache.set(textureKey, DEFAULT_BODY_METRICS);
+      return DEFAULT_BODY_METRICS;
+    }
+
+    const padding = this.resolvePadding(config?.autoPadding);
+
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+
+    frames.forEach((frame) => {
+      const width = frame.cutWidth;
+      const height = frame.cutHeight;
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const alpha = frame.getPixelAlpha(x, y);
+          if (alpha > 16) {
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+    });
+
+    if (
+      minX === Number.POSITIVE_INFINITY ||
+      minY === Number.POSITIVE_INFINITY ||
+      maxX === Number.NEGATIVE_INFINITY ||
+      maxY === Number.NEGATIVE_INFINITY
+    ) {
+      this.autoBodyCache.set(textureKey, DEFAULT_BODY_METRICS);
+      return DEFAULT_BODY_METRICS;
+    }
+
+    const baseWidth = frames[0].cutWidth;
+    const baseHeight = frames[0].cutHeight;
+
+    const paddedMinX = Math.max(minX + padding.left, 0);
+    const paddedMaxX = Math.min(maxX - padding.right, baseWidth - 1);
+    const paddedMinY = Math.max(minY + padding.top, 0);
+    const paddedMaxY = Math.min(maxY - padding.bottom, baseHeight - 1);
+
+    const widthPx = Math.max(paddedMaxX - paddedMinX + 1, 1);
+    const heightPx = Math.max(paddedMaxY - paddedMinY + 1, 1);
+
+    const metrics: RectBodyConfig = {
+      widthRatio: widthPx / baseWidth,
+      heightRatio: heightPx / baseHeight,
+      offsetXRatio: paddedMinX / baseWidth,
+      offsetYRatio: paddedMinY / baseHeight,
+      anchor: 'top'
+    };
+
+    this.autoBodyCache.set(textureKey, metrics);
+    return metrics;
+  }
+
+  private resolvePadding(padding?: AutoPaddingConfig) {
+    const all = padding?.all ?? 0;
+    const padX = padding?.x ?? all;
+    const padY = padding?.y ?? all;
+    return {
+      left: Math.max(padding?.left ?? padX, 0),
+      right: Math.max(padding?.right ?? padX, 0),
+      top: Math.max(padding?.top ?? padY, 0),
+      bottom: Math.max(padding?.bottom ?? padY, 0)
+    };
   }
 }
