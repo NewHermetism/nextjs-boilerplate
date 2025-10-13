@@ -84,10 +84,6 @@ class PlayScene extends Phaser.Scene {
     this.showLeaderBoard = showLeaderBoard;
     this.checkLeadearboardVisibility = checkLeadearboardVisibility;
     this.SocketHandler = new SocketHandler({ accessToken, scene: this });
-
-    this.events.once(Phaser.Scenes.Events.DESTROY, () => {
-      this.SocketHandler.destroy();
-    });
   }
 
   create() {
