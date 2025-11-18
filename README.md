@@ -56,6 +56,15 @@ yarn build:testnet
 yarn build:mainnet
 ```
 
+### Test mode (bypass authentication)
+
+For automated demos or local testing you can bypass the MultiversX login guard by
+creating an `.env.local` file (or updating the existing one) with
+`VITE_TEST_MODE=true`. When this flag is set the app treats the session as
+authenticated (skipping `/unlock`) and loads a mock wallet profile so the Dino
+game can run without talking to the backend sockets. Remove or set the flag to
+`false` when you need the usual authentication behaviour back.
+
 ## Roadmap
 
 See the [open issues](https://github.com/multiversx/mx-template-dapp/issues) for a list of proposed features (and known issues).

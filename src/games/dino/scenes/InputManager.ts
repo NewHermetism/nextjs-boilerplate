@@ -1,6 +1,5 @@
 // InputManager.ts
 import Phaser from 'phaser';
-import { isMobile, isTablet } from 'react-device-detect';
 
 export default class InputManager {
   private scene: Phaser.Scene;
@@ -26,14 +25,12 @@ export default class InputManager {
   }
 
   private setupInputs() {
-    // Touch/mouse input
+    // Touch/mouse input (allow jumping on desktop too)
     if (this.scene.input) {
       this.scene.input.on(
         'pointerdown',
         () => {
-          if (isMobile || isTablet) {
-            this.onJump();
-          }
+          this.onJump();
         },
         this.scene
       );
@@ -42,6 +39,7 @@ export default class InputManager {
     // Keyboard input
     if (this.scene.input.keyboard) {
       this.scene.input.keyboard.on('keydown-SPACE', this.onJump, this.scene);
+      this.scene.input.keyboard.on('keydown-UP', this.onJump, this.scene);
     }
   }
 

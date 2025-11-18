@@ -4,16 +4,19 @@ import { EventType, AvatarEnum } from 'types';
 import PlayScene from '../scenes/PlayScene';
 import {
   normalizeWalletProfile,
-  type WalletProfile
+  type WalletProfile,
+  testWalletProfile
 } from 'hooks/useGetProfile';
+import { isTestModeEnabled } from 'utils/isTestModeEnabled';
 
 const isSecureConnection = SOCKET_API_URL.startsWith('https');
 
 export default class SocketHandler {
   scene: PlayScene;
-  socket: Socket;
+  socket: Socket | null = null;
   accessToken: string;
   private isDestroyed = false;
+  private readonly isMocked = isTestModeEnabled();
 
   private readonly handleConnect = () => {
     console.log('Game: Connected to server');
@@ -71,6 +74,11 @@ export default class SocketHandler {
     this.scene = scene;
     this.accessToken = accessToken;
 
+    if (this.isMocked) {
+      this.applyMockProfile();
+      return;
+    }
+
     this.socket = io(SOCKET_API_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -92,8 +100,23 @@ export default class SocketHandler {
     this.socket.on('getVDashProfileError', this.handleProfileError);
   }
 
+  private applyMockProfile = () => {
+    this.scene.profile = testWalletProfile;
+    this.scene.profileLoadError = false;
+    const selectedCharacter =
+      typeof testWalletProfile.selected_character === 'number'
+        ? testWalletProfile.selected_character
+        : 0;
+    this.scene.handleSetCharacterSelect(selectedCharacter);
+  };
+
   getProfile = () => {
-    if (this.isDestroyed) {
+    if (this.isMocked) {
+      this.applyMockProfile();
+      return;
+    }
+
+    if (this.isDestroyed || !this.socket) {
       return;
     }
 
@@ -103,6 +126,19 @@ export default class SocketHandler {
   };
 
   setVDashSelectedCharacter = (selected_character: AvatarEnum) => {
+    if (this.isMocked) {
+      this.scene.profile = {
+        ...testWalletProfile,
+        selected_character
+      } as WalletProfile;
+      this.scene.handleSetCharacterSelect(selected_character);
+      return;
+    }
+
+    if (!this.socket) {
+      return;
+    }
+
     this.socket.emit('setVDashSelectedCharacter', {
       accessToken: this.accessToken,
       selected_character
@@ -110,6 +146,17 @@ export default class SocketHandler {
   };
 
   startGameEvent = () => {
+    if (this.isMocked) {
+      if (!this.scene.gameId) {
+        this.scene.gameId = `test-mode-${Date.now()}`;
+      }
+      return;
+    }
+
+    if (!this.socket) {
+      return;
+    }
+
     this.socket.emit('sendVDashEvent', {
       accessToken: this.accessToken,
       timestamp: Date.now(),
@@ -119,6 +166,10 @@ export default class SocketHandler {
   };
 
   sendVDashEvent = (type: EventType.JUMP | EventType.CREATE_OBSTACLE) => {
+    if (this.isMocked || !this.socket) {
+      return;
+    }
+
     this.socket.emit('sendVDashEvent', {
       accessToken: this.accessToken,
       timestamp: Date.now(),
@@ -129,6 +180,16 @@ export default class SocketHandler {
   };
 
   endGameEvent = (score: string) => {
+    if (this.isMocked) {
+      this.scene.gameId = undefined;
+      return;
+    }
+
+    if (!this.socket) {
+      this.scene.gameId = undefined;
+      return;
+    }
+
     this.socket.emit('sendVDashEvent', {
       accessToken: this.accessToken,
       timestamp: Date.now(),
@@ -146,6 +207,9 @@ export default class SocketHandler {
     }
 
     this.isDestroyed = true;
+    if (this.isMocked || !this.socket) {
+      return;
+    }
     this.socket.off('connect', this.handleConnect);
     this.socket.off('disconnect', this.handleDisconnect);
     this.socket.off('error', this.handleError);

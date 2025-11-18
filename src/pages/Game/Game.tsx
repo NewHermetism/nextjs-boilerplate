@@ -9,6 +9,7 @@ import { RotateScreen } from './components/RotateScreen';
 import { LeaderboardModal } from './components/LeaderboardModal';
 import { useGetLeaderboard, useGetLoginInfo } from 'hooks';
 import { isTablet, isMobile } from 'react-device-detect';
+import { isTestModeEnabled } from 'utils/isTestModeEnabled';
 
 export const Game = () => {
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -17,6 +18,9 @@ export const Game = () => {
   const isLeaderboardOpenRef = useRef(isLeaderboardOpen);
 
   const { tokenLogin } = useGetLoginInfo();
+  const accessToken = isTestModeEnabled()
+    ? 'test-mode-token'
+    : tokenLogin?.nativeAuthToken;
 
   useEffect(() => {
     isLeaderboardOpenRef.current = isLeaderboardOpen;
@@ -27,7 +31,7 @@ export const Game = () => {
   }, [isMobile, isTablet, isLandscape]);
 
   useEffect(() => {
-    if (tokenLogin?.nativeAuthToken) {
+    if (accessToken) {
       const config = {
         type: Phaser.AUTO,
         width: '900',
@@ -50,7 +54,7 @@ export const Game = () => {
       gameRef.current.scene.add(
         'PlayScene',
         new PlayScene(
-          tokenLogin?.nativeAuthToken,
+          accessToken,
           () => setIsLeaderboardOpen(true),
           () => isLeaderboardOpenRef.current
         )
@@ -62,7 +66,7 @@ export const Game = () => {
         gameRef.current = null;
       }
     };
-  }, [tokenLogin?.nativeAuthToken]);
+  }, [accessToken]);
 
   const { leaderboard, loading } = useGetLeaderboard({
     fetchProps: [isLeaderboardOpen],
