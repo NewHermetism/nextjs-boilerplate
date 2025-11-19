@@ -54,7 +54,8 @@ export default class ScoreManager {
   }
 
   getScoreIncrementalValue(): number {
-    switch (this.scene.selectedCharacterIndex) {
+    const { avatarIndex } = this.scene.getActiveCharacterConfig();
+    switch (avatarIndex) {
       case 0:
         return 1.1;
       case 1:

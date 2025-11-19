@@ -1,0 +1,190 @@
+[
+  {
+    "id": "white-pijama",
+    "avatarIndex": 0,
+    "label": "WHITE",
+    "order": 0,
+    "defaultEnvironmentId": "white-city",
+    "profileFlag": "has_white_pijama_nft",
+    "marketplaceUrl": "https://xoxno.com/collection/SUPERVIC-f07785",
+    "music": {
+      "path": "/assets/music/pijamas.ogg"
+    },
+    "thumbnail": {
+      "path": "/assets/characters/white-pijama/1.png"
+    },
+    "spritesheets": {
+      "idle": {
+        "path": "/assets/characters/white-pijama/idle.png",
+        "frameWidth": 45,
+        "frameHeight": 96
+      },
+      "running": {
+        "path": "/assets/characters/white-pijama/running_pijamas.png",
+        "frameWidth": 80,
+        "frameHeight": 100
+      }
+    },
+    "animations": {
+      "idle": {
+        "frameRate": 10,
+        "repeat": -1,
+        "endFrame": 3
+      },
+      "running": {
+        "frameRate": 10,
+        "repeat": -1,
+        "endFrame": 5
+      }
+    },
+    "body": {
+      "idle": {
+        "width": 45,
+        "height": 70,
+        "offsetX": 7,
+        "offsetY": 25
+      },
+      "running": {
+        "width": 55,
+        "height": 70,
+        "offsetX": 12,
+        "offsetY": 25
+      }
+    },
+    "airFrame": 5,
+    "obstacles": [
+      "enemy-lava",
+      "enemy-fireball",
+      "enemy-toxic-waste",
+      "enemy-boss",
+      "enemy-bone"
+    ],
+    "obstacleWeights": [0.3, 0.2, 0.2, 0.2, 0.1]
+  },
+  {
+    "id": "mini-boss",
+    "avatarIndex": 1,
+    "label": "BOSS",
+    "order": 1,
+    "defaultEnvironmentId": "boss-city",
+    "profileFlag": "has_boss_nft",
+    "marketplaceUrl": "https://xoxno.com/collection/MINIBOSSES-104b7f",
+    "music": {
+      "path": "/assets/music/boss.ogg"
+    },
+    "thumbnail": {
+      "path": "/assets/characters/mini-boss/1.png",
+      "scale": 0.8
+    },
+    "spritesheets": {
+      "idle": {
+        "path": "/assets/characters/mini-boss/idle.png",
+        "frameWidth": 94,
+        "frameHeight": 120
+      },
+      "running": {
+        "path": "/assets/characters/mini-boss/running.png",
+        "frameWidth": 123,
+        "frameHeight": 117
+      }
+    },
+    "animations": {
+      "idle": {
+        "frameRate": 6,
+        "repeat": -1,
+        "endFrame": 5
+      },
+      "running": {
+        "frameRate": 10,
+        "repeat": -1,
+        "endFrame": 5
+      }
+    },
+    "body": {
+      "idle": {
+        "width": 85,
+        "height": 88,
+        "offsetX": 19,
+        "offsetY": 22
+      },
+      "running": {
+        "width": 95,
+        "height": 88,
+        "offsetX": 14,
+        "offsetY": 22
+      }
+    },
+    "airFrame": 2,
+    "obstacles": [
+      "enemy-seringe",
+      "enemy-fireball",
+      "obsticle-small",
+      "obsticle-big",
+      "enemy-white",
+      "enemy-blue"
+    ],
+    "obstacleWeights": [0.2, 0.2, 0.2, 0.2, 0.1, 0.1]
+  },
+  {
+    "id": "blue-victor",
+    "avatarIndex": 2,
+    "label": "BLUE",
+    "order": 2,
+    "defaultEnvironmentId": "blue-city",
+    "profileFlag": "has_blue_victor_nft",
+    "marketplaceUrl": "https://xoxno.com/collection/VICBITS-da9df7",
+    "music": {
+      "path": "/assets/music/blue.ogg"
+    },
+    "thumbnail": {
+      "path": "/assets/characters/blue/blue-victor_thumbnail.png"
+    },
+    "spritesheets": {
+      "idle": {
+        "path": "/assets/characters/blue/blue-victor_idle_spritesheet.png",
+        "frameWidth": 40,
+        "frameHeight": 88
+      },
+      "running": {
+        "path": "/assets/characters/blue/blue-victor_run_spritesheet.png",
+        "frameWidth": 60,
+        "frameHeight": 100
+      }
+    },
+    "animations": {
+      "idle": {
+        "frameRate": 10,
+        "repeat": -1,
+        "endFrame": 3
+      },
+      "running": {
+        "frameRate": 10,
+        "repeat": -1,
+        "endFrame": 5
+      }
+    },
+    "body": {
+      "idle": {
+        "width": 30,
+        "height": 58,
+        "offsetX": 5,
+        "offsetY": 25
+      },
+      "running": {
+        "width": 38,
+        "height": 58,
+        "offsetX": 6,
+        "offsetY": 25
+      }
+    },
+    "airFrame": 3,
+    "obstacles": [
+      "enemy-lava",
+      "enemy-fireball",
+      "enemy-toxic-waste",
+      "enemy-boss",
+      "enemy-bone"
+    ],
+    "obstacleWeights": [0.3, 0.2, 0.2, 0.2, 0.1]
+  }
+]

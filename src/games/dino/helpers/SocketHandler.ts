@@ -1,6 +1,6 @@
 import { SOCKET_API_URL } from 'config';
 import { io, Socket } from 'socket.io-client';
-import { EventType, AvatarEnum } from 'types';
+import { EventType } from 'types';
 import PlayScene from '../scenes/PlayScene';
 import {
   normalizeWalletProfile,
@@ -8,6 +8,7 @@ import {
   testWalletProfile
 } from 'hooks/useGetProfile';
 import { isTestModeEnabled } from 'utils/isTestModeEnabled';
+import type { CharacterId } from '../config/characters.config';
 
 const isSecureConnection = SOCKET_API_URL.startsWith('https');
 
@@ -50,13 +51,14 @@ export default class SocketHandler {
 
   private readonly handleProfile = (profile: unknown) => {
     const normalized = normalizeWalletProfile(profile);
-    this.scene.profile = normalized;
+    if (!normalized) {
+      this.scene.profile = undefined;
+      this.scene.profileLoadError = true;
+      return;
+    }
+
     this.scene.profileLoadError = false;
-    const characterIndex =
-      normalized && typeof normalized.selected_character === 'number'
-        ? normalized.selected_character
-        : 0;
-    this.scene.handleSetCharacterSelect(characterIndex);
+    this.scene.applyProfile(normalized);
   };
 
   private readonly handleProfileError = (error: unknown) => {
@@ -101,13 +103,8 @@ export default class SocketHandler {
   }
 
   private applyMockProfile = () => {
-    this.scene.profile = testWalletProfile;
     this.scene.profileLoadError = false;
-    const selectedCharacter =
-      typeof testWalletProfile.selected_character === 'number'
-        ? testWalletProfile.selected_character
-        : 0;
-    this.scene.handleSetCharacterSelect(selectedCharacter);
+    this.scene.applyProfile(testWalletProfile);
   };
 
   getProfile = () => {
@@ -125,13 +122,13 @@ export default class SocketHandler {
     });
   };
 
-  setVDashSelectedCharacter = (selected_character: AvatarEnum) => {
+  setVDashSelectedCharacter = (characterId: CharacterId) => {
     if (this.isMocked) {
-      this.scene.profile = {
-        ...testWalletProfile,
-        selected_character
-      } as WalletProfile;
-      this.scene.handleSetCharacterSelect(selected_character);
+      const currentProfile = this.scene.profile ?? testWalletProfile;
+      this.scene.applyProfile({
+        ...currentProfile,
+        selectedCharacterId: characterId
+      });
       return;
     }
 
@@ -141,7 +138,7 @@ export default class SocketHandler {
 
     this.socket.emit('setVDashSelectedCharacter', {
       accessToken: this.accessToken,
-      selected_character
+      character_id: characterId
     });
   };
 
@@ -157,11 +154,15 @@ export default class SocketHandler {
       return;
     }
 
+    const characterId = this.scene.getActiveCharacterConfig().id;
+    const environmentId = this.scene.getActiveEnvironmentId();
+
     this.socket.emit('sendVDashEvent', {
       accessToken: this.accessToken,
       timestamp: Date.now(),
       type: EventType.START,
-      avatar: this.scene.selectedCharacterIndex
+      character_id: characterId,
+      environment_id: environmentId
     });
   };
 
@@ -170,12 +171,16 @@ export default class SocketHandler {
       return;
     }
 
+    const characterId = this.scene.getActiveCharacterConfig().id;
+    const environmentId = this.scene.getActiveEnvironmentId();
+
     this.socket.emit('sendVDashEvent', {
       accessToken: this.accessToken,
       timestamp: Date.now(),
       type,
       game_id: this.scene.gameId,
-      avatar: this.scene.selectedCharacterIndex
+      character_id: characterId,
+      environment_id: environmentId
     });
   };
 
@@ -190,13 +195,17 @@ export default class SocketHandler {
       return;
     }
 
+    const characterId = this.scene.getActiveCharacterConfig().id;
+    const environmentId = this.scene.getActiveEnvironmentId();
+
     this.socket.emit('sendVDashEvent', {
       accessToken: this.accessToken,
       timestamp: Date.now(),
       game_id: this.scene.gameId,
       score,
       type: EventType.END,
-      avatar: this.scene.selectedCharacterIndex
+      character_id: characterId,
+      environment_id: environmentId
     });
     this.scene.gameId = undefined;
   };

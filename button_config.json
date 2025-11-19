@@ -1,0 +1,34 @@
+{
+  "default_font": "/usr/share/fonts/TTF/JetBrainsMonoNerdFontMono-Bold.ttf",
+  "default_font_size": 24,
+  "default_text_color": [
+    255,
+    255,
+    255
+  ],
+  "templates_dir": "public/assets/ui/buttons/templates",
+  "output_dir": "public/assets/ui/buttons",
+  "buttons": [
+    {
+      "template": "play_template.png",
+      "text": "PLAY",
+      "output": "play.png"
+    },
+    {
+      "template": "avatar_template.png",
+      "text": "AVATAR",
+      "output": "avatar.png"
+    },
+    {
+      "template": "leaderboard_template.png",
+      "text": "LEADERBOARD",
+      "output": "leaderboard.png",
+      "font_size": 20
+    },
+    {
+      "template": "store_template.png",
+      "text": "STORE",
+      "output": "store.png"
+    }
+  ]
+}

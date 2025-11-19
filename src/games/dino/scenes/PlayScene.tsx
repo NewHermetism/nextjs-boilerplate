@@ -12,6 +12,14 @@ import { GAME_SETTINGS, SOUND_CONFIG } from './Constants';
 import SocketHandler from '../helpers/SocketHandler';
 import { isTablet, isMobile } from 'react-device-detect';
 import type { WalletProfile } from 'hooks/useGetProfile';
+import {
+  type CharacterConfig,
+  type CharacterId,
+  getCharacterByAvatarIndexOrDefault,
+  getCharacterById,
+  getDefaultCharacter
+} from '../config/characters.config';
+import type { EnvironmentId } from '../config/environments.config';
 
 class PlayScene extends Phaser.Scene {
   public SocketHandler: SocketHandler;
@@ -75,27 +83,45 @@ class PlayScene extends Phaser.Scene {
   // External components
   private characterModal!: CharacterModal;
   private menu!: Menu;
-  public selectedCharacterIndex: number = 0;
+  private activeCharacterConfig: CharacterConfig = getDefaultCharacter();
+  public selectedEnvironmentId?: EnvironmentId;
+  private isEnvironmentPinned = false;
+
+  public get selectedCharacterId(): CharacterId {
+    return this.activeCharacterConfig.id as CharacterId;
+  }
+
+  public get selectedCharacterIndex(): number {
+    return this.activeCharacterConfig.avatarIndex;
+  }
   private showLeaderBoard: () => void;
   private updateVisibility?: () => void;
   private checkLeadearboardVisibility: () => boolean;
-  public handleSetCharacterSelect = (index: number): boolean => {
-    this.selectedCharacterIndex = index;
+  public handleSetCharacterSelect = (selection: CharacterId | number): boolean => {
+    const isIdSelection = typeof selection === 'string';
+    const nextCharacter = isIdSelection
+      ? getCharacterById(selection as CharacterId)
+      : getCharacterByAvatarIndexOrDefault(selection as number);
+
+    if (!nextCharacter) {
+      return false;
+    }
+
+    this.activeCharacterConfig = nextCharacter;
+    if (!this.isEnvironmentPinned) {
+      this.selectedEnvironmentId =
+        nextCharacter.defaultEnvironmentId as EnvironmentId;
+    }
     const canUpdateScene = this.environmentManager && this.characterModal;
     if (canUpdateScene) {
       this.environmentManager.onSelectCharacter();
-      this.characterModal.updateCharacterOpacity();
+      this.characterModal.setActiveCharacter(this.selectedCharacterId);
+      this.notifyEnvironmentChanged();
     }
 
     // Update music when character is selected
     if (this.isGameRunning) {
-      const musicKey =
-        index === 0
-          ? 'pijamas_music'
-          : index === 1
-          ? 'boss_music'
-          : 'blue_music';
-
+      const musicKey = this.getActiveCharacterConfig().music.key;
       this.startBackgroundMusic(musicKey);
     }
 
@@ -113,6 +139,15 @@ class PlayScene extends Phaser.Scene {
     this.showLeaderBoard = showLeaderBoard;
     this.checkLeadearboardVisibility = checkLeadearboardVisibility;
     this.SocketHandler = new SocketHandler({ accessToken, scene: this });
+  }
+
+  public applyProfile(profile: WalletProfile) {
+    this.profile = profile;
+    this.selectedEnvironmentId = profile.selectedEnvironmentId;
+    this.characterModal?.setUnlockedCharacters(profile.unlockedCharacters);
+    this.characterModal?.setUnlockedEnvironments(profile.unlockedEnvironments);
+    this.characterModal?.setActiveEnvironment(this.getActiveEnvironmentId());
+    this.handleSetCharacterSelect(profile.selectedCharacterId);
   }
 
   create() {
@@ -147,23 +182,23 @@ class PlayScene extends Phaser.Scene {
       .setOffset(0, GAME_SETTINGS.ON_GROUND_POSITION);
 
     // Initialize character modal
-    this.characterModal = new CharacterModal(
-      this,
-      this.scale.width / 2 - 210,
-      this.scale.height / 2 - 125
-    );
+    this.characterModal = new CharacterModal(this);
     this.characterModal.hide();
 
     // Initialize menu callback
     const handleShowAvatarModal = () => {
       if (!this.checkLeadearboardVisibility()) {
-        const lockedIndexes: number[] = [];
         if (this.profile) {
-          if (!this.profile.has_white_pijama_nft) lockedIndexes.push(0);
-          if (!this.profile.has_boss_nft) lockedIndexes.push(1);
-          if (!this.profile.has_blue_victor_nft) lockedIndexes.push(2);
+          this.characterModal.setUnlockedCharacters(
+            this.profile.unlockedCharacters
+          );
+          this.characterModal.setUnlockedEnvironments(
+            this.profile.unlockedEnvironments
+          );
+          this.characterModal.setActiveEnvironment(
+            this.getActiveEnvironmentId()
+          );
         }
-        this.characterModal.setLockedCharacters(lockedIndexes);
         this.characterModal.show();
       }
     };
@@ -175,7 +210,10 @@ class PlayScene extends Phaser.Scene {
     };
 
     const handlePlayMenu = () => {
-      if (!this.characterModal.visible && !this.checkLeadearboardVisibility()) {
+      if (
+        !this.characterModal.visible &&
+        !this.checkLeadearboardVisibility()
+      ) {
         // Wait for profile to load before allowing game start
         if (!this.profile) {
           if (this.profileLoadError) {
@@ -189,10 +227,7 @@ class PlayScene extends Phaser.Scene {
         }
 
         // Check if user has any NFT
-        const hasAnyNFT =
-          this.profile.has_white_pijama_nft ||
-          this.profile.has_boss_nft ||
-          this.profile.has_blue_victor_nft;
+        const hasAnyNFT = this.profile.unlockedCharacters.length > 0;
 
         if (hasAnyNFT) {
           console.log('[PLAY] User has NFT, starting game');
@@ -251,11 +286,12 @@ class PlayScene extends Phaser.Scene {
     );
 
     if (this.profile) {
-      const initialCharacter =
-        typeof this.profile.selected_character === 'number'
-          ? this.profile.selected_character
-          : 0;
-      this.handleSetCharacterSelect(initialCharacter);
+      this.selectedEnvironmentId = this.profile.selectedEnvironmentId;
+      this.handleSetCharacterSelect(this.profile.selectedCharacterId);
+      this.characterModal.setUnlockedEnvironments(
+        this.profile.unlockedEnvironments
+      );
+      this.characterModal.setActiveEnvironment(this.getActiveEnvironmentId());
     }
 
     // Initialize colliders
@@ -640,14 +676,7 @@ class PlayScene extends Phaser.Scene {
     });
 
     // Play character-specific music
-    const musicKey =
-      this.selectedCharacterIndex === 0
-        ? 'pijamas_music'
-        : this.selectedCharacterIndex === 1
-        ? 'boss_music'
-        : 'blue_music';
-
-    this.startBackgroundMusic(musicKey);
+    this.startBackgroundMusic(this.getActiveCharacterConfig().music.key);
   }
 
   update(time: number, delta: number): void {
@@ -689,6 +718,32 @@ class PlayScene extends Phaser.Scene {
     }
     this.destroyDebugMenu();
     this.events.off('characterChanged');
+  }
+
+  public getActiveCharacterConfig() {
+    return this.activeCharacterConfig;
+  }
+
+  public getActiveEnvironmentId(): EnvironmentId {
+    return (
+      this.selectedEnvironmentId ??
+      (this.activeCharacterConfig.defaultEnvironmentId as EnvironmentId)
+    );
+  }
+
+  public setEnvironmentSelection(environmentId: EnvironmentId, pin = true) {
+    this.selectedEnvironmentId = environmentId;
+    this.isEnvironmentPinned = pin;
+    if (this.environmentManager) {
+      this.environmentManager.onSelectCharacter();
+      this.notifyEnvironmentChanged();
+    }
+  }
+
+  private notifyEnvironmentChanged() {
+    const environmentId = this.getActiveEnvironmentId();
+    this.events.emit('environment-changed', environmentId);
+    this.characterModal?.setActiveEnvironment(environmentId);
   }
 }
 

@@ -2,6 +2,8 @@
 import Phaser from 'phaser';
 import { GAME_SETTINGS, SOUND_CONFIG } from './Constants';
 import PlayScene from './PlayScene';
+import { CHARACTERS, CharacterConfig } from '../config/characters.config';
+import type { CharacterAnimationState } from '../config/assetKeys';
 
 export default class DinoCharacter {
   private scene: PlayScene;
@@ -13,9 +15,12 @@ export default class DinoCharacter {
     this.scene = scene;
     this.onGroundPosition = GAME_SETTINGS.ON_GROUND_POSITION;
 
+    const initialConfig = this.getSelectedCharacterConfig();
+    const initialTexture = initialConfig.animations.idle.sheet.key;
+
     // Create sprite with precise hitbox matching sprite body
     this.sprite = this.scene.physics.add
-      .sprite(70, y, 'idle_boss')
+      .sprite(70, y, initialTexture)
       .setCollideWorldBounds(true)
       .setGravityY(GAME_SETTINGS.GRAVITY)
       .setBodySize(85, 88)
@@ -34,94 +39,35 @@ export default class DinoCharacter {
   }
 
   initAnims() {
-    // Boss animations
-    this.scene.anims.create({
-      key: 'running_boss',
-      frames: this.scene.anims.generateFrameNumbers('running_boss', {
-        start: 0,
-        end: 5
-      }),
-      frameRate: 10,
-      repeat: -1
-    });
-
-    this.scene.anims.create({
-      key: 'idle_boss',
-      frames: this.scene.anims.generateFrameNumbers('idle_boss', {
-        start: 0,
-        end: 5
-      }),
-      frameRate: 6,
-      repeat: -1
-    });
-
-    // Pijamas animations
-    this.scene.anims.create({
-      key: 'running_pijamas',
-      frames: this.scene.anims.generateFrameNumbers('running_pijamas', {
-        start: 0,
-        end: 5
-      }),
-      frameRate: 10,
-      repeat: -1
-    });
-
-    this.scene.anims.create({
-      key: 'idle_pijamas',
-      frames: this.scene.anims.generateFrameNumbers('idle_pijamas', {
-        start: 0,
-        end: 3
-      }),
-      frameRate: 10,
-      repeat: -1
-    });
-
-    // Blue animations
-    this.scene.anims.create({
-      key: 'running_blue',
-      frames: this.scene.anims.generateFrameNumbers('running_blue', {
-        start: 0,
-        end: 5
-      }),
-      frameRate: 10,
-      repeat: -1
-    });
-
-    this.scene.anims.create({
-      key: 'idle_blue',
-      frames: this.scene.anims.generateFrameNumbers('idle_blue', {
-        start: 0,
-        end: 3
-      }),
-      frameRate: 10,
-      repeat: -1
+    CHARACTERS.forEach((character) => {
+      (Object.entries(character.animations) as [
+        CharacterAnimationState,
+        CharacterConfig['animations'][CharacterAnimationState]
+      ][]).forEach(([, animation]) => {
+        if (this.scene.anims.exists(animation.animation.key)) {
+          return;
+        }
+        this.scene.anims.create({
+          key: animation.animation.key,
+          frames: this.scene.anims.generateFrameNumbers(animation.sheet.key, {
+            start: animation.animation.startFrame,
+            end: animation.animation.endFrame
+          }),
+          frameRate: animation.animation.frameRate,
+          repeat: animation.animation.repeat
+        });
+      });
     });
   }
 
   updateCharacter() {
-    switch (this.scene.selectedCharacterIndex) {
-      case 0: // Pijamas - Precise hitbox matching sprite body (excludes hair)
-        this.sprite
-          .play('idle_pijamas', true)
-          .setBodySize(45, 70)
-          .setSize(45, 70)
-          .setOffset(7, this.onGroundPosition + 25);
-        break;
-      case 1: // Boss - Precise hitbox matching sprite body (excludes horns)
-        this.sprite
-          .play('idle_boss', true)
-          .setBodySize(85, 88)
-          .setSize(85, 88)
-          .setOffset(19, this.onGroundPosition + 22);
-        break;
-      case 2: // Blue - Precise hitbox matching sprite body (excludes hair)
-        this.sprite
-          .play('idle_blue', true)
-          .setBodySize(30, 58)
-          .setSize(30, 58)
-          .setOffset(5, this.onGroundPosition + 25);
-        break;
-    }
+    const config = this.getSelectedCharacterConfig();
+    const pose = config.body.idle;
+    this.sprite
+      .play(config.animations.idle.animation.key, true)
+      .setBodySize(pose.width, pose.height)
+      .setSize(pose.width, pose.height)
+      .setOffset(pose.offsetX, this.onGroundPosition + pose.offsetYFromGround);
   }
 
   jump() {
@@ -136,30 +82,13 @@ export default class DinoCharacter {
   }
 
   run() {
-    switch (this.scene.selectedCharacterIndex) {
-      case 0: // Pijamas - Precise hitbox, slightly wider when running
-        this.sprite
-          .play('running_pijamas', true)
-          .setBodySize(55, 70)
-          .setSize(55, 70)
-          .setOffset(12, this.onGroundPosition + 25);
-        break;
-      case 1: // Boss - Precise hitbox, arms extended when running
-        this.sprite
-          .play('running_boss', true)
-          .setBodySize(95, 88)
-          .setDepth(1)
-          .setOrigin(0, 1)
-          .setOffset(14, this.onGroundPosition + 22);
-        break;
-      case 2: // Blue - Precise hitbox, slightly wider when running
-        this.sprite
-          .play('running_blue', true)
-          .setBodySize(38, 58)
-          .setSize(38, 58)
-          .setOffset(6, this.onGroundPosition + 25);
-        break;
-    }
+    const config = this.getSelectedCharacterConfig();
+    const pose = config.body.running;
+    this.sprite
+      .play(config.animations.running.animation.key, true)
+      .setBodySize(pose.width, pose.height)
+      .setSize(pose.width, pose.height)
+      .setOffset(pose.offsetX, this.onGroundPosition + pose.offsetYFromGround);
   }
 
   updateAnimation() {
@@ -168,17 +97,8 @@ export default class DinoCharacter {
       this.scene.scale.height - this.sprite.body.height
     ) {
       // In air
-      switch (this.scene.selectedCharacterIndex) {
-        case 0:
-          this.sprite.setFrame(5);
-          break;
-        case 1:
-          this.sprite.setFrame(2);
-          break;
-        case 2:
-          this.sprite.setFrame(3);
-          break;
-      }
+      const config = this.getSelectedCharacterConfig();
+      this.sprite.setFrame(config.airFrame);
     } else {
       // On ground - reset to normal hitbox
       this.sprite.body.setSize(this.sprite.body.width, this.sprite.body.height);
@@ -191,5 +111,9 @@ export default class DinoCharacter {
     this.sprite.body.setSize(this.sprite.body.width, this.sprite.body.height);
     this.sprite.body.offset.y = this.onGroundPosition;
     this.updateCharacter();
+  }
+
+  private getSelectedCharacterConfig(): CharacterConfig {
+    return this.scene.getActiveCharacterConfig();
   }
 }

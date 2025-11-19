@@ -113,7 +113,7 @@ class Menu extends Phaser.GameObjects.Container {
     this.setVisible(false);
   }
 
-  enableCursorPointer(buttons: Phaser.GameObjects.Image[]) {
+  enableCursorPointer(buttons: Phaser.GameObjects.GameObject[]) {
     buttons.forEach((button) => {
       button.on('pointerover', () => {
         this.scene.input.manager.canvas.style.cursor = 'pointer';

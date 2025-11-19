@@ -1,0 +1,33 @@
+[
+  {
+    "id": "white-city",
+    "label": "White City",
+    "layers": {
+      "ground": "/assets/environments/white-city/layers/ground.png",
+      "city1": "/assets/environments/white-city/layers/city1.png",
+      "city2": "/assets/environments/white-city/layers/city2.png",
+      "sky": "/assets/environments/white-city/layers/sky.png"
+    }
+  },
+  {
+    "id": "boss-city",
+    "label": "Boss City",
+    "layers": {
+      "ground": "/assets/environments/boss-city/layers/ground.png",
+      "city1": "/assets/environments/boss-city/layers/city1.png",
+      "city2": "/assets/environments/boss-city/layers/city2.png",
+      "sky": "/assets/environments/boss-city/layers/sky.png",
+      "cloud": "/assets/environments/boss-city/layers/clouds.png"
+    }
+  },
+  {
+    "id": "blue-city",
+    "label": "Blue City",
+    "layers": {
+      "ground": "/assets/environments/blue-city/layers/ground.png",
+      "city": "/assets/environments/blue-city/layers/city.png",
+      "sky": "/assets/environments/blue-city/layers/sky.png",
+      "cloud": "/assets/environments/blue-city/layers/clouds.png"
+    }
+  }
+]

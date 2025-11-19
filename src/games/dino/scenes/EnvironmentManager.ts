@@ -1,7 +1,13 @@
 // EnvironmentManager.ts
 import Phaser from 'phaser';
-import { CHARACTER_CONFIG } from './Constants';
 import PlayScene from './PlayScene';
+import {
+  ENVIRONMENTS,
+  EnvironmentConfig,
+  EnvironmentId,
+  EnvironmentLayerAsset,
+  getEnvironmentById
+} from '../config/environments.config';
 
 export default class EnvironmentManager {
   private scene: PlayScene;
@@ -11,6 +17,7 @@ export default class EnvironmentManager {
   private city1: Phaser.GameObjects.TileSprite;
   private city2: Phaser.GameObjects.TileSprite | null;
   private decorations: Phaser.GameObjects.Group;
+  private currentEnvironment: EnvironmentConfig;
 
   constructor(scene: PlayScene) {
     this.scene = scene;
@@ -20,44 +27,54 @@ export default class EnvironmentManager {
     this.cloud = null;
     this.city2 = null;
 
-    const defaultConfig =
-      CHARACTER_CONFIG[this.scene.selectedCharacterIndex].background;
+    this.currentEnvironment = this.resolveEnvironmentConfig();
+    const layers = this.currentEnvironment.layers;
+    const groundLayer = layers.ground;
+    const skyLayer = layers.sky;
+
+    if (!groundLayer || !skyLayer) {
+      throw new Error(
+        `[EnvironmentManager] Missing required layers for environment ${this.currentEnvironment.id}`
+      );
+    }
 
     // Create required background layers
     this.sky = this.scene.add
-      .tileSprite(0, height, width, 0, defaultConfig.sky)
+      .tileSprite(0, height, width, 0, skyLayer.key)
       .setOrigin(0, 1);
 
-    if (defaultConfig.city) {
+    if (layers.city) {
       this.city1 = this.scene.add
-        .tileSprite(0, height, width, 0, defaultConfig.city!)
+        .tileSprite(0, height, width, 0, layers.city.key)
         .setOrigin(0, 1);
-      this.city2 = this.scene.add
-        .tileSprite(0, height, width, 0, defaultConfig.city!)
-        .setOrigin(0, 1);
+      this.city2 = null;
     } else {
+      const city1Layer = layers.city1 ?? layers.city;
       this.city1 = this.scene.add
-        .tileSprite(0, height, width, 0, defaultConfig.city1!)
+        .tileSprite(0, height, width, 0, city1Layer?.key ?? skyLayer.key)
         .setOrigin(0, 1);
 
-      this.city2 = this.scene.add
-        .tileSprite(0, height, width, 0, defaultConfig.city2!)
-        .setOrigin(0, 1);
+      const city2Layer = layers.city2;
+      this.city2 = city2Layer
+        ? this.scene.add
+            .tileSprite(0, height, width, 0, city2Layer.key)
+            .setOrigin(0, 1)
+        : null;
     }
 
     this.ground = this.scene.add
-      .tileSprite(0, height, width, 67, defaultConfig.ground)
+      .tileSprite(0, height, width, 67, groundLayer.key)
       .setOrigin(0, 1);
 
-    if (defaultConfig.cloud) {
+    if (layers.cloud) {
       this.cloud = this.scene.add
-        .tileSprite(0, 309, width, 310, defaultConfig.cloud)
+        .tileSprite(0, 309, width, 310, layers.cloud.key)
         .setOrigin(0, 1);
     } else {
       // Init by default to be used if character is changed and have cloud
       // bug fix for change from pijama to boss or blue character
       this.cloud = this.scene.add
-        .tileSprite(0, 309, width, 310, defaultConfig.sky)
+        .tileSprite(0, 309, width, 310, skyLayer.key)
         .setOrigin(0, 1)
         .setVisible(false);
     }
@@ -68,62 +85,70 @@ export default class EnvironmentManager {
   }
 
   onSelectCharacter() {
-    const config = CHARACTER_CONFIG[this.scene.selectedCharacterIndex];
-    if (!config) return;
+    const nextEnvironment = this.resolveEnvironmentConfig();
+    this.currentEnvironment = nextEnvironment;
+    this.applyEnvironmentLayers(nextEnvironment);
+  }
 
+  private resolveEnvironmentConfig(): EnvironmentConfig {
+    const selectionId = this.scene.getActiveEnvironmentId();
+    const environment = getEnvironmentById(selectionId);
+    return environment ?? ENVIRONMENTS[0];
+  }
+
+  private applyEnvironmentLayers(environment: EnvironmentConfig) {
     const { width, height } = this.scene.scale;
-    const bg = config.background;
+    const layers = environment.layers;
+    const groundLayer = layers.ground;
+    const skyLayer = layers.sky;
 
-    // Update required background layers
-    this.ground.setTexture(bg.ground).setVisible(true);
-    this.ground.setVisible(true);
-    this.sky.setTexture(bg.sky);
-
-    // Handle cloud (optional)
-    if (bg.cloud) {
-      if (!this.cloud) {
-        this.cloud = this.scene.add
-          .tileSprite(0, 209, width, 210, bg.cloud)
-          .setOrigin(0, 1);
-      } else {
-        this.cloud.setVisible(true);
-        this.cloud.setTexture(bg.cloud);
-      }
-    } else if (this.cloud?.visible) {
-      this.cloud.setVisible(false);
+    if (!groundLayer || !skyLayer) {
+      return;
     }
 
-    // Handle city layers
-    if (bg.city) {
-      // Blue character case - single city layer
-      if (!this.city1) {
-        this.city2 = this.scene.add
-          .tileSprite(0, height, width, 0, bg.city)
-          .setOrigin(0, 1);
-      } else {
-        this.city1.setTexture(bg.city);
-      }
+    this.ground.setTexture(groundLayer.key).setVisible(true);
+    this.sky.setTexture(skyLayer.key);
+
+    const applyCityTexture = (layer: EnvironmentLayerAsset) => {
+      this.city1.setTexture(layer.key).setVisible(true);
       if (this.city2?.visible) {
         this.city2.setVisible(false);
       }
+    };
+
+    if (layers.city) {
+      applyCityTexture(layers.city);
     } else {
-      // Other characters with city1 and city2
-      if (bg.city1) {
-        this.city1.setTexture(bg.city1);
+      const city1Layer = layers.city1;
+      if (city1Layer) {
+        this.city1.setTexture(city1Layer.key).setVisible(true);
       }
 
-      if (bg.city2) {
+      const city2Layer = layers.city2;
+      if (city2Layer) {
         if (!this.city2) {
           this.city2 = this.scene.add
-            .tileSprite(0, height, width, 0, bg.city2)
+            .tileSprite(0, height, width, 0, city2Layer.key)
             .setOrigin(0, 1);
         } else {
           this.city2.setVisible(true);
-          this.city2.setTexture(bg.city2);
+          this.city2.setTexture(city2Layer.key);
         }
       } else if (this.city2?.visible) {
         this.city2.setVisible(false);
       }
+    }
+
+    if (layers.cloud) {
+      if (!this.cloud) {
+        this.cloud = this.scene.add
+          .tileSprite(0, 309, width, 310, layers.cloud.key)
+          .setOrigin(0, 1);
+      } else {
+        this.cloud.setTexture(layers.cloud.key).setVisible(true);
+      }
+    } else if (this.cloud?.visible) {
+      this.cloud.setVisible(false);
     }
   }
 

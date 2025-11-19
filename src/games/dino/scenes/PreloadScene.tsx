@@ -1,4 +1,7 @@
 import Phaser from 'phaser';
+import { CHARACTERS } from '../config/characters.config';
+import { ENVIRONMENTS } from '../config/environments.config';
+import { OBSTACLE_ASSETS } from '../config/obstacles.config';
 
 class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -41,9 +44,6 @@ class PreloadScene extends Phaser.Scene {
 
     // Background music
     this.load.audio('menu_music', '/assets/music/menu.ogg');
-    this.load.audio('boss_music', '/assets/music/boss.ogg');
-    this.load.audio('pijamas_music', '/assets/music/pijamas.ogg');
-    this.load.audio('blue_music', '/assets/music/blue.ogg');
 
     // Sound effects
     this.load.audio('jump', '/assets/jump.m4a');
@@ -51,130 +51,51 @@ class PreloadScene extends Phaser.Scene {
     this.load.audio('reach', '/assets/reach.m4a');
 
     // Music button textures
-    this.load.image('music_on', '/assets/Audio_Button_On.png');
-    this.load.image('music_off', '/assets/Audio_Button_Off.png');
+    this.load.image('music_on', '/assets/ui/icons/audio-button-on.png');
+    this.load.image('music_off', '/assets/ui/icons/audio-button-off.png');
 
-    // Boss Envoirement
-    this.load.image('boss_ground', '/assets/envoirements/boss/ground.png');
-    this.load.image('boss_city_1', '/assets/envoirements/boss/city1.png');
-    this.load.image('boss_city_2', '/assets/envoirements/boss/city2.png');
-    this.load.image('boss_sky', '/assets/envoirements/boss/sky.png');
-    this.load.image('boss_cloud', '/assets/envoirements/boss/clouds.png');
-
-    // Blue Envoirement
-    this.load.image('blue_ground', '/assets/envoirements/blue/ground.png');
-    this.load.image('blue_city', '/assets/envoirements/blue/city.png');
-    this.load.image('blue_sky', '/assets/envoirements/blue/sky.png');
-    this.load.image('blue_cloud', '/assets/envoirements/blue/clouds.png');
-
-    // White Envoirement
-    this.load.image('white_ground', '/assets/envoirements/white/ground.png');
-    this.load.image('white_city_1', '/assets/envoirements/white/city1.png');
-    this.load.image('white_city_2', '/assets/envoirements/white/city2.png');
-    this.load.image('white_sky', '/assets/envoirements/white/sky.png');
-
-    this.load.image('restart', '/assets/restart.png');
-    this.load.image('back_button', '/assets/back.png');
-    this.load.image('character1', '/assets/characters/pijamas/1.png');
-    this.load.image('character2', '/assets/characters/mini_boss/1.png');
-    this.load.image('character3', '/assets/characters/blue/1.png');
-    this.load.image('menu_background', '/assets/objects/menu_background.png');
-    this.load.image('game_name', '/assets/objects/game_name.png');
-    this.load.image('lock', '/assets/objects/lock.png');
-    this.load.image('footer', '/assets/objects/footer.png');
-    this.load.image('avatar', '/assets/objects/buttons/avatar.png');
-    this.load.image('play', '/assets/objects/buttons/play.png');
-    this.load.image('store', '/assets/objects/buttons/store.png');
-    this.load.image('leaderboard', '/assets/objects/buttons/leaderboard.png');
-
-    this.load.spritesheet(
-      'idle_boss',
-      '/assets/characters/mini_boss/idle.png',
-      {
-        frameWidth: 94,
-        frameHeight: 120
-      }
-    );
-
-    this.load.spritesheet(
-      'running_boss',
-      '/assets/characters/mini_boss/running.png',
-      {
-        frameWidth: 123,
-        frameHeight: 117
-      }
-    );
-
-    this.load.spritesheet(
-      'idle_pijamas',
-      '/assets/characters/pijamas/idle.png',
-      {
-        frameWidth: 45,
-        frameHeight: 96
-      }
-    );
-
-    this.load.spritesheet(
-      'running_pijamas',
-      '/assets/characters/pijamas/running_pijamas.png',
-      {
-        frameWidth: 80,
-        frameHeight: 100
-      }
-    );
-
-    this.load.spritesheet(
-      'idle_blue',
-      '/assets/characters/blue/blue_idle.png',
-      {
-        frameWidth: 40,
-        frameHeight: 88
-      }
-    );
-
-    this.load.spritesheet(
-      'running_blue',
-      '/assets/characters/blue/blue_run.png',
-      {
-        frameWidth: 60,
-        frameHeight: 100
-      }
-    );
-
-    this.load.spritesheet('energy', '/assets/objects/energy/energy.png', {
-      frameWidth: 44,
-      frameHeight: 26
+    ENVIRONMENTS.forEach((environment) => {
+      Object.values(environment.layers).forEach((layer) => {
+        if (layer) {
+          this.load.image(layer.key, layer.path);
+        }
+      });
     });
 
-    this.load.spritesheet('bone', '/assets/objects/bone/bone.png', {
-      frameWidth: 36,
-      frameHeight: 35
+    this.load.image('restart', '/assets/ui/icons/restart.png');
+    this.load.image('back_button', '/assets/ui/icons/back.png');
+    CHARACTERS.forEach((character) => {
+      this.load.image(character.thumbnail.key, character.thumbnail.path);
+      this.load.audio(character.music.key, character.music.path);
+
+      Object.values(character.animations).forEach((animation) => {
+        this.load.spritesheet(animation.sheet.key, animation.sheet.path, {
+          frameWidth: animation.sheet.frameWidth,
+          frameHeight: animation.sheet.frameHeight
+        });
+      });
     });
 
-    this.load.spritesheet('seringe', '/assets/objects/seringe/seringe.png', {
-      frameWidth: 49,
-      frameHeight: 34
-    });
+    this.load.image('menu_background', '/assets/shared/menu_background.png');
+    this.load.image('game_name', '/assets/shared/game_name.png');
+    this.load.image('lock', '/assets/ui/icons/lock.png');
+    this.load.image('footer', '/assets/shared/footer.png');
+    this.load.image('avatar', '/assets/ui/buttons/avatar.png');
+    this.load.image('play', '/assets/ui/buttons/play.png');
+    this.load.image('store', '/assets/ui/buttons/store.png');
+    this.load.image('leaderboard', '/assets/ui/buttons/leaderboard.png');
 
-    this.load.spritesheet('lava', '/assets/objects/lava/lava.png', {
-      frameWidth: 68,
-      frameHeight: 38
-    });
-
-    this.load.spritesheet(
-      'toxic-waste',
-      '/assets/objects/toxic_waste/toxic_waste.png',
-      {
-        frameWidth: 65,
-        frameHeight: 56
+    Object.values(OBSTACLE_ASSETS).forEach((asset) => {
+      if (asset.type === 'spritesheet' && asset.frameWidth && asset.frameHeight) {
+        this.load.spritesheet(asset.key, asset.path, {
+          frameWidth: asset.frameWidth,
+          frameHeight: asset.frameHeight
+        });
+        return;
       }
-    );
 
-    this.load.image(
-      'obsticle-small',
-      '/assets/objects/spikes/spikes_small.png'
-    );
-    this.load.image('obsticle-big', '/assets/objects/spikes/spikes_big.png');
+      this.load.image(asset.key, asset.path);
+    });
   }
 
   create() {

@@ -111,17 +111,24 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
       let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
+      const successEvent = 'getVDashProfile';
+      const errorEvent = 'getVDashProfileError';
+
       const cleanup = () => {
-        socketInstance.off('getProfile', handleSuccess);
-        socketInstance.off('getProfileError', handleError);
+        socketInstance.off(successEvent, handleSuccess);
+        socketInstance.off(errorEvent, handleError);
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
       };
 
-      const handleSuccess = (data: { profile: any }) => {
+      const handleSuccess = (data: { profile?: any } | any) => {
         cleanup();
-        resolve(data.profile);
+        if (data && typeof data === 'object' && 'profile' in data) {
+          resolve((data as { profile: any }).profile);
+        } else {
+          resolve(data);
+        }
       };
 
       const handleError = (error: unknown) => {
@@ -133,15 +140,15 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
         );
       };
 
-      socketInstance.on('getProfile', handleSuccess);
-      socketInstance.on('getProfileError', handleError);
+      socketInstance.on(successEvent, handleSuccess);
+      socketInstance.on(errorEvent, handleError);
 
       timeoutId = setTimeout(() => {
         cleanup();
         reject(new Error('Profile request timed out'));
       }, socketTimeout);
 
-      socketInstance.emit('getProfile', {
+      socketInstance.emit('getVDashProfile', {
         accessToken
       });
     });

@@ -4,3 +4,4 @@ export * from './useScrollToElement';
 export * from './useIsWebProvider';
 export * from './useGetProfile';
 export * from './useGetLeaderboard';
+export * from './useCatalog';

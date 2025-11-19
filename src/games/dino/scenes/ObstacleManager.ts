@@ -1,6 +1,10 @@
 import Phaser from 'phaser';
-import { GAME_SETTINGS, CHARACTER_CONFIG } from './Constants';
+import { GAME_SETTINGS } from './Constants';
 import PlayScene from './PlayScene';
+import {
+  CharacterId,
+  getCharacterById
+} from '../config/characters.config';
 
 type BodyAnchor = 'bottom' | 'center' | 'top';
 
@@ -111,10 +115,7 @@ export default class ObstacleManager {
       { key: 'enemy-seringe', frames: 'seringe', end: 3, rate: 6 },
       { key: 'enemy-lava', frames: 'lava', end: 5, rate: 6 },
       { key: 'enemy-toxic-waste', frames: 'toxic-waste', end: 5, rate: 6 },
-      { key: 'enemy-bone', frames: 'bone', end: 7, rate: 10 },
-      { key: 'enemy-boss', frames: 'idle_boss', end: 5, rate: 6 },
-      { key: 'enemy-white', frames: 'idle_pijamas', end: 3, rate: 6 },
-      { key: 'enemy-blue', frames: 'idle_blue', end: 3, rate: 6 }
+      { key: 'enemy-bone', frames: 'bone', end: 7, rate: 10 }
     ];
 
     animConfigs.forEach((config) => {
@@ -128,12 +129,42 @@ export default class ObstacleManager {
         repeat: -1
       });
     });
+
+    const characterEnemies: Array<{
+      key: string;
+      characterId: CharacterId;
+    }> = [
+      { key: 'enemy-boss', characterId: 'mini-boss' },
+      { key: 'enemy-white', characterId: 'white-pijama' },
+      { key: 'enemy-blue', characterId: 'blue-victor' }
+    ];
+
+    characterEnemies.forEach(({ key, characterId }) => {
+      const character = getCharacterById(characterId);
+      if (!character) {
+        return;
+      }
+      const idleAnimation = character.animations.idle;
+      this.scene.anims.create({
+        key,
+        frames: this.scene.anims.generateFrameNumbers(idleAnimation.sheet.key, {
+          start: idleAnimation.animation.startFrame,
+          end: idleAnimation.animation.endFrame
+        }),
+        frameRate: idleAnimation.animation.frameRate,
+        repeat: idleAnimation.animation.repeat
+      });
+    });
   }
 
   placeObstacle(): Phaser.Physics.Arcade.Sprite | null {
     try {
-      const config = CHARACTER_CONFIG[this.scene.selectedCharacterIndex];
-      if (!config) return null;
+      const characterConfig = this.scene.getActiveCharacterConfig();
+      const obstacles = characterConfig.obstacles;
+      const obstacleWeights = characterConfig.obstacleWeights;
+      if (!obstacles.length) {
+        return null;
+      }
 
       // Clean up any existing off-screen obstacles first
       this.cleanupObstacles();
@@ -145,8 +176,8 @@ export default class ObstacleManager {
       const { width, height } = this.scene.scale;
 
       const obstacleType = this.getWeightedRandomObstacle(
-        config.obstacles,
-        config.obstacleWeights
+        obstacles,
+        obstacleWeights
       );
 
       const obstacle = this.createObstacle(
