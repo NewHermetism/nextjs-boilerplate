@@ -18,7 +18,8 @@ export enum Links {
   Link4 = 'https://xoxno.com/collection/VIDSUPVIC-eb16ab',
   Link5 = 'https://xoxno.com/collection/HALLOVIC-b80f05',
   Link6 = 'https://xoxno.com/collection/BEEF-032185',
-  Link7 = 'https://xoxno.com/collection/MINIBOSSES-104b7f'
+  Link7 = 'https://xoxno.com/collection/MINIBOSSES-104b7f',
+  Link8 = 'https://www.oox.art/marketplace/collections/SMARUGON-69bfc0'
 }
 
 export enum EventType {
