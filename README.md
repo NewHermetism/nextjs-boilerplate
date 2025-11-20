@@ -63,7 +63,9 @@ creating an `.env.local` file (or updating the existing one) with
 `VITE_TEST_MODE=true`. When this flag is set the app treats the session as
 authenticated (skipping `/unlock`) and loads a mock wallet profile so the Dino
 game can run without talking to the backend sockets. Remove or set the flag to
-`false` when you need the usual authentication behaviour back.
+`false` when you need the usual authentication behaviour back. Test mode is
+automatically disabled on production builds unless you also set
+`VITE_ALLOW_TEST_MODE_IN_PROD=true` explicitly.
 
 ## Roadmap
 
