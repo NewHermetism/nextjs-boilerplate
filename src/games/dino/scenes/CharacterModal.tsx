@@ -114,7 +114,6 @@ class CharacterModal extends Phaser.GameObjects.Container {
   private mapCardHeight: number;
   private cardLabelOffset: number;
   private layoutScale: number;
-  private lockIconOffset: number;
   private unlockedCharacterIds = new Set<CharacterId>();
   private unlockedEnvironmentIds = new Set<EnvironmentId>();
   private activeCharacterId: CharacterId = getDefaultCharacter().id as CharacterId;
@@ -152,7 +151,6 @@ class CharacterModal extends Phaser.GameObjects.Container {
     this.mapCardWidth = scaled(BASE_CARD_WIDTH);
     this.mapCardHeight = scaled(BASE_CARD_HEIGHT);
     this.cardLabelOffset = scaled(CARD_LABEL_OFFSET);
-    this.lockIconOffset = scaled(18);
 
     this.sectionLeft = this.sectionSidePadding;
     this.sectionWidth = this.modalWidth - this.sectionSidePadding * 2;
@@ -296,10 +294,8 @@ class CharacterModal extends Phaser.GameObjects.Container {
         this.setActiveTab('maps');
       });
 
-      const lockIcon = this.scene.add
-        .image(0, -this.characterCardHeight / 2 + this.lockIconOffset, 'lock')
-        .setScale(0.03)
-        .setVisible(false);
+      const lockIcon = this.scene.add.image(0, 0, 'lock').setScale(0.03).setVisible(false);
+      lockIcon.setOrigin(0.5);
 
       this.characterSection.add(label);
       container.add([background, frame, thumbnail, hitArea, lockIcon]);
@@ -368,10 +364,8 @@ class CharacterModal extends Phaser.GameObjects.Container {
         }
       });
 
-      const lockIcon = this.scene.add
-        .image(0, -this.mapCardHeight / 2 + this.lockIconOffset, 'lock')
-        .setScale(0.03)
-        .setVisible(false);
+      const lockIcon = this.scene.add.image(0, 0, 'lock').setScale(0.03).setVisible(false);
+      lockIcon.setOrigin(0.5);
 
       this.mapSection.add(label);
       container.add([hitArea, lockIcon]);
@@ -455,7 +449,7 @@ class CharacterModal extends Phaser.GameObjects.Container {
     if (!this.confirmButton || !this.confirmText) {
       return;
     }
-    const label = this.activeTab === 'characters' ? 'Select Character' : 'Select Map';
+    const label = 'Select';
     const canConfirm =
       this.activeTab === 'characters'
         ? this.pendingCharacterId !== this.activeCharacterId
