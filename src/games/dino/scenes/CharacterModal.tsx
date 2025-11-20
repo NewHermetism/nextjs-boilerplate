@@ -115,12 +115,8 @@ class CharacterModal extends Phaser.GameObjects.Container {
   private cardLabelOffset: number;
   private layoutScale: number;
   private lockIconOffset: number;
-  private unlockedCharacterIds = new Set<CharacterId>(
-    CHARACTERS.map((character) => character.id as CharacterId)
-  );
-  private unlockedEnvironmentIds = new Set<EnvironmentId>(
-    ENVIRONMENTS.map((env) => env.id as EnvironmentId)
-  );
+  private unlockedCharacterIds = new Set<CharacterId>();
+  private unlockedEnvironmentIds = new Set<EnvironmentId>();
   private activeCharacterId: CharacterId = getDefaultCharacter().id as CharacterId;
   private pendingCharacterId: CharacterId = this.activeCharacterId;
   private activeEnvironmentId?: EnvironmentId;
