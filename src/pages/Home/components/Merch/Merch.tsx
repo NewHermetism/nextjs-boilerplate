@@ -14,7 +14,7 @@ export const Merch = () => {
     >
       <a
         target='_blank'
-        href='https://supervictoruniverse.com/'
+        href='https://supervictor.shop'
         className='flex flex-col flex-1 justify-center w-full'
       >
         <div className='text-4xl lg:text-6xl font-bold tracking-wider font-bungee text-white text-center mb-1 lg:mb-7'>
