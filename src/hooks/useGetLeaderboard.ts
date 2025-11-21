@@ -28,7 +28,6 @@ export const useGetLeaderboard = ({
 
 
     const getLeaderboard = (entriesLimit: number): Promise<VDashScore[]> => {
-
       setLoading(true);
       return new Promise<any[]>((resolve, reject) => {
         if (!socket) {
@@ -39,10 +38,15 @@ export const useGetLeaderboard = ({
           limit: entriesLimit
         });
 
-        socket.once('getLeaderboard', (data: any[]) => {
-          setLeaderboard(data);
+        socket.once('getLeaderboard', (data: any) => {
+          const normalizedData = Array.isArray(data)
+            ? data
+            : Array.isArray(data?.leaderboard)
+              ? data.leaderboard
+              : [];
+          setLeaderboard(normalizedData);
           setLoading(false);
-          resolve(data);
+          resolve(normalizedData);
         });
 
         socket.once('getLeaderboardError', (error) => {
