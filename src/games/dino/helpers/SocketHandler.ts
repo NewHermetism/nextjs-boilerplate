@@ -8,7 +8,7 @@ import {
   testWalletProfile
 } from 'hooks/useGetProfile';
 import { isTestModeEnabled } from 'utils/isTestModeEnabled';
-import type { CharacterId } from '../config/characters.config';
+import { getCharacterById, type CharacterId } from '../config/characters.config';
 
 const isSecureConnection = SOCKET_API_URL.startsWith('https');
 
@@ -136,9 +136,14 @@ export default class SocketHandler {
       return;
     }
 
+    const selectedCharacter = getCharacterById(characterId)?.avatarIndex;
+
     this.socket.emit('setVDashSelectedCharacter', {
       accessToken: this.accessToken,
-      character_id: characterId
+      character_id: characterId,
+      ...(typeof selectedCharacter === 'number'
+        ? { selected_character: selectedCharacter }
+        : {})
     });
   };
 
@@ -155,6 +160,7 @@ export default class SocketHandler {
     }
 
     const characterId = this.scene.getActiveCharacterConfig().id;
+    const avatar = this.scene.getActiveCharacterConfig().avatarIndex;
     const environmentId = this.scene.getActiveEnvironmentId();
 
     this.socket.emit('sendVDashEvent', {
@@ -162,6 +168,7 @@ export default class SocketHandler {
       timestamp: Date.now(),
       type: EventType.START,
       character_id: characterId,
+      avatar,
       environment_id: environmentId
     });
   };
@@ -172,6 +179,7 @@ export default class SocketHandler {
     }
 
     const characterId = this.scene.getActiveCharacterConfig().id;
+    const avatar = this.scene.getActiveCharacterConfig().avatarIndex;
     const environmentId = this.scene.getActiveEnvironmentId();
 
     this.socket.emit('sendVDashEvent', {
@@ -180,6 +188,7 @@ export default class SocketHandler {
       type,
       game_id: this.scene.gameId,
       character_id: characterId,
+      avatar,
       environment_id: environmentId
     });
   };
@@ -196,15 +205,18 @@ export default class SocketHandler {
     }
 
     const characterId = this.scene.getActiveCharacterConfig().id;
+    const avatar = this.scene.getActiveCharacterConfig().avatarIndex;
     const environmentId = this.scene.getActiveEnvironmentId();
+    const parsedScore = Number(score);
 
     this.socket.emit('sendVDashEvent', {
       accessToken: this.accessToken,
       timestamp: Date.now(),
       game_id: this.scene.gameId,
-      score,
+      score: Number.isFinite(parsedScore) ? parsedScore : score,
       type: EventType.END,
       character_id: characterId,
+      avatar,
       environment_id: environmentId
     });
     this.scene.gameId = undefined;
