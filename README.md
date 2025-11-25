@@ -37,6 +37,10 @@ yarn start:mainnet
 This will start the React app in development mode, using the configs found in the `vite.config.ts` file.
 Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
+If you are running the victor-api locally (default port `3001`), add
+`VITE_VDASH_SOCKET_URL=http://localhost:3001` to `.env.local` so the dapp reads
+the same leaderboard data as the backend you are testing against.
+
 The page will reload if you make edits.\
 You will also see any lint errors in the console.
 

@@ -90,7 +90,7 @@ export const LeaderboardModal = ({
         <div className='p-6 pb-2'>
           <h2 className='text-2xl font-bold text-white text-center mb-4'>LEADERBOARD</h2>
         </div>
-        <div className='overflow-y-auto scrollbar-hide px-6 pb-6 flex-1'>
+        <div className='overflow-y-auto px-6 pb-6 flex-1 max-h-[60vh]'>
           <table className='w-full border-separate border-spacing-y-2 text-center'>
             <thead className='sticky top-0 z-10'>
               <tr className='bg-[#FDF3A1] text-black font-thin text-2xl'>

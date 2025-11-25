@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useSocket } from 'pages/Providers/socket'; // Calls the Socket. 
+import { useSocket } from 'pages/Providers/socket'; // Calls the Socket.
 import { VDashScore } from 'types';
+
+const MIN_LEADERBOARD_ENTRIES = 30;
 
 interface UseGetLeaderboardProps {
   fetchProps?: any[];
@@ -11,14 +13,13 @@ interface UseGetLeaderboardProps {
 export const useGetLeaderboard = ({
   fetchProps = [],
   shouldFetch = true,
-  limit = 100
+  limit = MIN_LEADERBOARD_ENTRIES
 }: UseGetLeaderboardProps) => {
 
-  const [leaderboard, setLeaderboard] = useState<VDashScore[]>([]); // (?) Why useState<VDashScore[] works, where is defined ?. 
-
+  const [leaderboard, setLeaderboard] = useState<VDashScore[]>([]);
   const [loading, setLoading] = useState<boolean>();
 
-  const { socket, isConnected } = useSocket(); //The CONSTs associated with the socket are defined from `pages/Providers/socket`
+  const { socket, isConnected } = useSocket();
 
  
   useEffect(() => {
@@ -27,9 +28,11 @@ export const useGetLeaderboard = ({
     }
 
 
+    const normalizedLimit = Math.max(limit, MIN_LEADERBOARD_ENTRIES);
+
     const getLeaderboard = (entriesLimit: number): Promise<VDashScore[]> => {
       setLoading(true);
-      return new Promise<any[]>((resolve, reject) => {
+      return new Promise<VDashScore[]>((resolve, reject) => {
         if (!socket) {
           reject(new Error('Socket not connected'));
           return;
@@ -57,7 +60,7 @@ export const useGetLeaderboard = ({
     };
 
 
-    getLeaderboard(limit);
+    getLeaderboard(normalizedLimit);
   }, [isConnected, shouldFetch, limit, socket, ...fetchProps]);
 
   return { leaderboard, loading };
