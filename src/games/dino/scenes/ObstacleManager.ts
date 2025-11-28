@@ -306,6 +306,7 @@ export default class ObstacleManager {
     body.setSize(bodyWidth, bodyHeight);
     body.setOffset(offsetX, offsetY);
     body.setAllowGravity(false);
+    this.setObstacleVelocity(body);
   }
 
   private getWeightedRandomObstacle(
@@ -333,12 +334,9 @@ export default class ObstacleManager {
 
   update(delta: number, gameSpeed: number) {
     this.scene.gameSpeed = gameSpeed;
-    // Normalize movement to 60 FPS baseline
-    const deltaFactor = delta / (1000 / 60);
-    Phaser.Actions.IncX(
-      this.obstacles.getChildren(),
-      -(this.scene.gameSpeed * deltaFactor)
-    );
+    // Keep physics bodies moving so overlap checks can't be skipped on low FPS
+    const velocityX = -this.scene.gameSpeed * 60; // convert px/frame@60fps to px/sec
+    this.obstacles.setVelocityX(velocityX);
 
     this.respawnTime += delta * this.scene.gameSpeed * 0.08;
     if (this.respawnTime >= 1500) {
@@ -443,5 +441,9 @@ export default class ObstacleManager {
       top: Math.max(padding?.top ?? padY, 0),
       bottom: Math.max(padding?.bottom ?? padY, 0)
     };
+  }
+
+  private setObstacleVelocity(body: Phaser.Physics.Arcade.Body) {
+    body.setVelocityX(-this.scene.gameSpeed * 60);
   }
 }
