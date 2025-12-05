@@ -118,3 +118,6 @@
   single wallet address, showing “USER WITHOUT ACESS” for others. Guard checks the
   pathname so it only activates on /editor and never affects the game or other pages
   (src/components/AccessGuard/AccessGuard.tsx:1-42, src/pages/Editor/index.tsx:1-28).
+  - Editor iframe now uses the raw HTML embedded via srcDoc instead of a public
+  static file, so the guarded route controls access and there’s no direct static
+  URL to bypass (src/pages/Editor/index.tsx:1-33; removed public/editor/index.html).

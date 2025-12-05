@@ -1,5 +1,6 @@
 import React from 'react';
 import { AccessGuard } from 'components';
+import editorHtml from '../../../test_editor/index.html?raw';
 
 export const Editor = () => {
   return (
@@ -14,7 +15,7 @@ export const Editor = () => {
       >
         <iframe
           title="Editor"
-          src="/editor/index.html"
+          srcDoc={editorHtml}
           style={{
             width: '100%',
             height: '100%',

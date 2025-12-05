@@ -68,17 +68,38 @@ const OBSTACLE_BODY_CONFIG: Record<string, ObstacleBodyConfig> = {
   'enemy-boss': {
     scale: 1,
     flipX: true,
-    autoPadding: { left: 18, right: 24, top: 12 }
+    autoPadding: { left: 18, right: 24, top: 12 },
+    body: {
+      anchor: 'bottom',
+      widthRatio: 0.6,
+      heightRatio: 0.82,
+      offsetXRatio: 0.2,
+      bottomPaddingRatio: 0.02
+    }
   },
   'enemy-white': {
     scale: 1,
     flipX: true,
-    autoPadding: { left: 12, right: 18, top: 10 }
+    autoPadding: { left: 12, right: 18, top: 10 },
+    body: {
+      anchor: 'bottom',
+      widthRatio: 0.62,
+      heightRatio: 0.8,
+      offsetXRatio: 0.19,
+      bottomPaddingRatio: 0.02
+    }
   },
   'enemy-blue': {
     scale: 1,
     flipX: true,
-    autoPadding: { left: 10, right: 16, top: 10 }
+    autoPadding: { left: 10, right: 16, top: 10 },
+    body: {
+      anchor: 'bottom',
+      widthRatio: 0.62,
+      heightRatio: 0.8,
+      offsetXRatio: 0.19,
+      bottomPaddingRatio: 0.02
+    }
   },
   'enemy-fireball': {
     scale: 1.3,
