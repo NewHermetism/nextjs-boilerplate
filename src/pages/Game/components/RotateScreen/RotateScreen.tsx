@@ -17,9 +17,9 @@ export const RotateScreen = () => {
         <IoPhoneLandscapeOutline className='text-6xl mb-4 animate-bounce' />
       </motion.div>
 
-      <p className='text-2xl font-bold'>Please Rotate Your Device</p>
+      <p className='text-2xl font-bold'>Best in landscape, but playable in portrait.</p>
       <p className='text-lg opacity-80'>
-        To play the game, switch to landscape mode.
+        Rotate for more room if you can; otherwise continue playing.
       </p>
     </motion.div>
   );

@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Editor Prototype</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        color-scheme: dark;
+        background: #0f1426;
+        color: #e9ecf5;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      }
+
+      body {
+        margin: 0;
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        grid-template-rows: 64px 1fr;
+        grid-template-areas:
+          'header header'
+          'sidebar main';
+        height: 100vh;
+      }
+
+      header {
+        grid-area: header;
+        padding: 12px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), transparent);
+      }
+
+      .sidebar {
+        grid-area: sidebar;
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 16px;
+        overflow-y: auto;
+      }
+
+      .main {
+        grid-area: main;
+        padding: 16px;
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 12px;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin: 0;
+        letter-spacing: 0.2px;
+      }
+
+      h2 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: #9fb4ff;
+      }
+
+      .section {
+        margin-bottom: 16px;
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 10px;
+      }
+
+      label {
+        display: block;
+        font-size: 12px;
+        margin-bottom: 6px;
+        color: #c2c9e5;
+      }
+
+      input,
+      select {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+        color: #e9ecf5;
+        outline: none;
+      }
+
+      .preview {
+        position: relative;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        background: #0c1021;
+        min-height: 360px;
+        overflow: hidden;
+      }
+
+      .todo {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: rgba(255, 221, 87, 0.12);
+        color: #ffd757;
+      }
+
+      .list {
+        margin: 0;
+        padding-left: 18px;
+        color: #cfd4ff;
+        line-height: 1.4;
+      }
+
+      .dropzone {
+        border: 1px dashed rgba(255, 255, 255, 0.25);
+        padding: 10px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.03);
+        font-size: 12px;
+        color: #cfd4ff;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .dropzone:hover {
+        border-color: rgba(159, 180, 255, 0.6);
+        background: rgba(159, 180, 255, 0.06);
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        font-size: 11px;
+        color: #cfd4ff;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        align-items: end;
+        margin-bottom: 6px;
+      }
+
+      .muted {
+        color: #98a3c5;
+        font-size: 12px;
+      }
+
+      .asset-preview {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .asset-preview img {
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .layer-item {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 10px;
+        background: rgba(255, 255, 255, 0.03);
+        display: grid;
+        grid-template-columns: 48px 1fr;
+        gap: 10px;
+      }
+
+      .layer-item.dragging {
+        opacity: 0.7;
+        border-color: #9fb4ff;
+      }
+
+      .drag-handle {
+        cursor: grab;
+        user-select: none;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        height: 100%;
+      }
+
+      .drag-handle:active {
+        cursor: grabbing;
+      }
+
+      .drop-indicator-before {
+        box-shadow: inset 0 3px 0 #9fb4ff;
+      }
+
+      .drop-indicator-after {
+        box-shadow: inset 0 -3px 0 #9fb4ff;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <div class="todo">Prototype space only</div>
+        <h1>Editor Mode</h1>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button id="importConfig">Import JSON</button>
+        <button id="exportConfig">Export JSON</button>
+        <button id="exportBundle">Export bundle (zip)</button>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <div class="section">
+        <h2>Character</h2>
+        <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div style="flex:1;">
+              <label for="charSelect">Select</label>
+              <select id="charSelect"></select>
+            </div>
+            <button id="addChar" type="button" style="margin-top:22px;">+ New</button>
+          </div>
+
+          <label for="charId">ID</label>
+          <input id="charId" placeholder="mini-boss" />
+
+          <label for="charLabel">Label</label>
+          <input id="charLabel" placeholder="Mini Boss" />
+
+          <label for="frameSize">Frame Size (w x h)</label>
+          <input id="frameSize" placeholder="80 x 100" />
+
+          <label for="bodySize">Body Hitbox (w x h @ offsetX, offsetY)</label>
+          <input id="bodySize" placeholder="85 x 88 @ 19, 30" />
+          <button id="toggleEdit" type="button" style="margin-top:6px;">Enable hitbox edit</button>
+
+          <label for="music">Music path</label>
+          <input id="music" placeholder="/assets/music/..." />
+        </div>
+        <div class="card">
+          <h3 style="margin:0 0 8px;font-size:13px;letter-spacing:0.3px;color:#9fb4ff;">Character assets</h3>
+          <div id="charInfoList" style="font-size:12px;line-height:1.4;color:#cfd4ff;"></div>
+          <div id="charUploads" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">
+            <div class="dropzone" data-asset="idle">
+              <div>Idle spritesheet</div>
+              <div class="asset-preview">
+                <img id="idlePreview" alt="Idle preview" />
+                <button type="button" data-change="idle">Change</button>
+              </div>
+            </div>
+            <div class="muted" id="idlePath"></div>
+
+            <div class="dropzone" data-asset="running">
+              <div>Running spritesheet</div>
+              <div class="asset-preview">
+                <img id="runPreview" alt="Running preview" />
+                <button type="button" data-change="running">Change</button>
+              </div>
+            </div>
+            <div class="muted" id="runPath"></div>
+
+            <div class="dropzone" data-asset="thumbnail">
+              <div>Thumbnail</div>
+              <div class="asset-preview">
+                <img id="thumbPreview" alt="Thumbnail preview" />
+                <button type="button" data-change="thumbnail">Change</button>
+              </div>
+            </div>
+            <div class="muted" id="thumbPath"></div>
+
+            <div class="dropzone" data-asset="music">
+              <div>Music</div>
+              <div class="asset-preview">
+                <span class="muted" id="musicPreview">No audio</span>
+                <button type="button" data-change="music">Change</button>
+              </div>
+            </div>
+            <div class="muted" id="musicPath"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Map</h2>
+        <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div style="flex:1;">
+              <label for="envSelect">Select</label>
+              <select id="envSelect"></select>
+            </div>
+            <button id="addEnv" type="button" style="margin-top:22px;">+ New</button>
+          </div>
+
+          <label for="environment">ID</label>
+          <input id="environment" placeholder="white-city" />
+
+          <!-- Layer list is below -->
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <h3 style="margin:0;font-size:13px;letter-spacing:0.3px;color:#9fb4ff;">Layers</h3>
+            <button id="addLayerBtn" type="button">+ Add layer</button>
+          </div>
+          <div id="layerList" style="font-size:12px;line-height:1.5;color:#cfd4ff;"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>NFT Binding</h2>
+        <div class="card">
+          <label for="nftContract">Contract</label>
+          <input id="nftContract" placeholder="erd1..." />
+
+          <label for="tokenId">Token ID / trait</label>
+          <input id="tokenId" placeholder="1234 or trait:gold" />
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Next steps</h2>
+        <div class="card">
+          <ul class="list">
+            <li>Import/export config JSON.</li>
+            <li>Load spritesheet and animate in preview.</li>
+            <li>Render hitbox overlay with mouse editing.</li>
+            <li>Add auth gate when moved into the main app.</li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div>
+        <h2>Live Preview (Phaser sandbox)</h2>
+        <div class="todo">Wire Phaser + asset loader + collision overlay here</div>
+      </div>
+      <div class="preview" id="preview">
+        <!-- Placeholder: instantiate a tiny Phaser scene here in the next step -->
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.87.0/dist/phaser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script>
+      // Minimal editor/preview wiring (no bundler required)
+      const PREVIEW_WIDTH = 900;
+      const PREVIEW_HEIGHT = 440;
+
+      const state = {
+        characters: [],
+        environments: [],
+        selectedChar: null,
+        selectedEnv: null,
+        game: null,
+        scene: null,
+        sprite: null,
+        hitboxOverlay: null,
+        handles: [],
+        dragContext: null,
+        isEditing: false,
+        newCharacters: [],
+        newEnvironments: []
+      };
+
+      async function loadJson(path) {
+        const res = await fetch(path);
+        if (!res.ok) throw new Error('Failed to load ' + path);
+        return res.json();
+      }
+
+      async function bootstrapData() {
+        try {
+          const [characters, environments] = await Promise.all([
+            loadJson('../src/games/dino/config/data/characters.json'),
+            loadJson('../src/games/dino/config/data/environments.json')
+          ]);
+          state.characters = characters;
+          state.environments = environments;
+          populateSelects();
+          pickDefaults();
+        } catch (err) {
+          console.error('Failed to load config data', err);
+          alert('Could not load character/environment data. Check dev server paths.');
+        }
+      }
+
+      function populateSelects() {
+        const charSelect = document.getElementById('charSelect');
+        const envSelect = document.getElementById('envSelect');
+        const allChars = [...state.characters, ...state.newCharacters];
+        const allEnvs = [...state.environments, ...state.newEnvironments];
+        const charGroups = [];
+        if (state.characters.length) {
+          charGroups.push(
+            `<optgroup label="Existing">${state.characters
+              .map((c) => `<option value="${c.id}">${c.label} (${c.id})</option>`)
+              .join('')}</optgroup>`
+          );
+        }
+        if (state.newCharacters.length) {
+          charGroups.push(
+            `<optgroup label="New">${state.newCharacters
+              .map((c) => `<option value="${c.id}">${c.label} (${c.id})</option>`)
+              .join('')}</optgroup>`
+          );
+        }
+        charSelect.innerHTML = charGroups.join('');
+
+        const envGroups = [];
+        if (state.environments.length) {
+          envGroups.push(
+            `<optgroup label="Existing">${state.environments
+              .map((e) => `<option value="${e.id}">${e.label} (${e.id})</option>`)
+              .join('')}</optgroup>`
+          );
+        }
+        if (state.newEnvironments.length) {
+          envGroups.push(
+            `<optgroup label="New">${state.newEnvironments
+              .map((e) => `<option value="${e.id}">${e.label} (${e.id})</option>`)
+              .join('')}</optgroup>`
+          );
+        }
+        envSelect.innerHTML = envGroups.join('');
+
+        charSelect.onchange = () => {
+          const c = allChars.find((x) => x.id === charSelect.value);
+          if (c) setCharacter(c);
+        };
+        envSelect.onchange = () => {
+          const e = allEnvs.find((x) => x.id === envSelect.value);
+          if (e) setEnvironment(e);
+        };
+
+        document.getElementById('addChar').onclick = addNewCharacter;
+        document.getElementById('addEnv').onclick = addNewEnvironment;
+      }
+
+      function pickDefaults() {
+        const allChars = [...state.characters, ...state.newCharacters];
+        const allEnvs = [...state.environments, ...state.newEnvironments];
+        if (allChars.length) setCharacter(allChars[0]);
+        if (allEnvs.length) setEnvironment(allEnvs[0]);
+      }
+
+      function setCharacter(char) {
+        state.selectedChar = char;
+        document.getElementById('charSelect').value = char.id;
+        document.getElementById('charId').value = char.id;
+        document.getElementById('charLabel').value = char.label;
+        document.getElementById('frameSize').value =
+          `${char.spritesheets.running.frameWidth} x ${char.spritesheets.running.frameHeight}`;
+        const body = char.body?.running ?? char.body?.idle ?? {};
+        document.getElementById('bodySize').value =
+          `${body.width ?? '?'} x ${body.height ?? '?'} @ ${body.offsetX ?? '?'}, ${body.offsetY ?? '?'}`;
+        document.getElementById('music').value = char.music?.path ?? '';
+        renderCharacterInfo(char);
+        updateAssetUI(char);
+        rebuildPreview();
+      }
+
+      function setEnvironment(env) {
+        ensureLayerOrder(env);
+        state.selectedEnv = env;
+        document.getElementById('envSelect').value = env.id;
+        document.getElementById('environment').value = env.id;
+        renderLayerManager(env);
+        rebuildPreview();
+      }
+
+      function renderCharacterInfo(char) {
+        const container = document.getElementById('charInfoList');
+        if (!char || !container) return;
+        const run = char.spritesheets?.running;
+        const idle = char.spritesheets?.idle;
+        const bodyRun = char.body?.running;
+        const bodyIdle = char.body?.idle;
+        const obstacles = Array.isArray(char.obstacles) ? char.obstacles : [];
+        const weights = Array.isArray(char.obstacleWeights) ? char.obstacleWeights : [];
+        const obstacleText = obstacles
+          .map((o, idx) => `${o} (${weights[idx] ?? 0}%)`)
+          .join(', ');
+        container.innerHTML = `
+          <div><strong>ID:</strong> ${char.id}</div>
+          <div><strong>Label:</strong> ${char.label}</div>
+          <div><strong>Running sheet:</strong> ${run?.path ?? '—'} (${run?.frameWidth ?? '?'}x${run?.frameHeight ?? '?'})</div>
+          <div><strong>Idle sheet:</strong> ${idle?.path ?? '—'} (${idle?.frameWidth ?? '?'}x${idle?.frameHeight ?? '?'})</div>
+          <div><strong>Body (run):</strong> ${bodyRun ? `${bodyRun.width}x${bodyRun.height} @ ${bodyRun.offsetX}, ${bodyRun.offsetY}` : '—'}</div>
+          <div><strong>Body (idle):</strong> ${bodyIdle ? `${bodyIdle.width}x${bodyIdle.height} @ ${bodyIdle.offsetX}, ${bodyIdle.offsetY}` : '—'}</div>
+          <div><strong>Obstacles:</strong> ${obstacleText || '—'}</div>
+        `;
+      }
+
+      // Higher in the list = higher priority (drawn on top). Default order puts ground first.
+      const DEFAULT_LAYER_ORDER = ['ground', 'city2', 'city1', 'city', 'cloud', 'sky'];
+
+      function ensureLayerOrder(env) {
+        if (env.layerOrder && Array.isArray(env.layerOrder) && env.layerOrder.length) return;
+        const keys = Object.keys(env.layers || {});
+        if (!keys.length) {
+          env.layerOrder = [...DEFAULT_LAYER_ORDER];
+          return;
+        }
+        const ordered = [];
+        DEFAULT_LAYER_ORDER.forEach((k) => {
+          if (keys.includes(k)) ordered.push(k);
+        });
+        keys.forEach((k) => {
+          if (!ordered.includes(k)) ordered.push(k);
+        });
+        env.layerOrder = ordered;
+      }
+
+      function renderLayerManager(env) {
+        const container = document.getElementById('layerList');
+        if (!env || !container) return;
+        ensureLayerOrder(env);
+        container.innerHTML = '';
+        if (!env.layerOrder.length) {
+          container.innerHTML = '<div>No layers defined.</div>';
+          return;
+        }
+
+        env.layerOrder.forEach((layerKey) => {
+          const displayPath = getEnvTargetPath(env, layerKey) || '';
+          const previewSrc = env.assetFiles?.[layerKey]?.previewUrl || env.layers?.[layerKey] || '';
+          const item = document.createElement('div');
+          item.className = 'layer-item';
+          item.dataset.layer = layerKey;
+          item.innerHTML = `
+            <div class="drag-handle" data-layer-handle="${layerKey}">☰</div>
+            <div>
+              <div class="row" style="grid-template-columns:1fr auto auto;align-items:center; margin-bottom:6px;">
+                <input data-layer-name="${layerKey}" value="${layerKey}" />
+                <button type="button" data-layer-upload="${layerKey}">Upload</button>
+                <button type="button" data-layer-delete="${layerKey}">Delete</button>
+              </div>
+              <div class="dropzone layer-drop" data-layer="${layerKey}" style="margin-top:6px;">
+                <div>Layer file</div>
+                <div class="asset-preview">
+                  <img id="preview-${layerKey}" alt="${layerKey} preview" src="${previewSrc}" />
+                  <button type="button" data-layer-change="${layerKey}">Change</button>
+                </div>
+              </div>
+              <div class="muted" id="path-${layerKey}">${displayPath || 'No asset yet'}</div>
+            </div>
+          `;
+          container.appendChild(item);
+        });
+
+        bindLayerListInteractions(env);
+      }
+
+      function bindLayerListInteractions(env) {
+        const container = document.getElementById('layerList');
+        if (!container) return;
+        container.querySelectorAll('[data-layer-upload]').forEach((btn) => {
+          const layerKey = btn.dataset.layerUpload;
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            pickFile((file) => handleEnvFile(layerKey, file));
+          };
+        });
+        container.querySelectorAll('[data-layer-change]').forEach((btn) => {
+          const layerKey = btn.dataset.layerChange;
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            pickFile((file) => handleEnvFile(layerKey, file));
+          };
+        });
+        container.querySelectorAll('[data-layer-delete]').forEach((btn) => {
+          const layerKey = btn.dataset.layerDelete;
+          btn.onclick = () => {
+            delete env.layers[layerKey];
+            delete env.assetTargets?.[layerKey];
+            env.layerOrder = env.layerOrder.filter((k) => k !== layerKey);
+            renderLayerManager(env);
+            rebuildPreview();
+          };
+        });
+        container.querySelectorAll('[data-layer-name]').forEach((input) => {
+          const oldKey = input.dataset.layerName;
+          input.onchange = () => {
+            const newKey = input.value.trim() || oldKey;
+            if (newKey === oldKey) return;
+            if (!env.layers) env.layers = {};
+            env.layers[newKey] = env.layers[oldKey];
+            delete env.layers[oldKey];
+            if (env.assetFiles?.[oldKey]) {
+              env.assetFiles[newKey] = env.assetFiles[oldKey];
+              delete env.assetFiles[oldKey];
+            }
+            if (env.assetTargets?.[oldKey]) {
+              env.assetTargets[newKey] = env.assetTargets[oldKey].replace(oldKey, newKey);
+              delete env.assetTargets[oldKey];
+            }
+            env.layerOrder = env.layerOrder.map((k) => (k === oldKey ? newKey : k));
+            renderLayerManager(env);
+            rebuildPreview();
+          };
+        });
+        container.querySelectorAll('.layer-drop').forEach((zone) => {
+          const layerKey = zone.dataset.layer;
+          zone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            zone.style.borderColor = '#9fb4ff';
+          });
+          zone.addEventListener('dragleave', () => {
+            zone.style.borderColor = 'rgba(255,255,255,0.25)';
+          });
+          zone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            zone.style.borderColor = 'rgba(255,255,255,0.25)';
+            const file = e.dataTransfer.files?.[0];
+            if (file) handleEnvFile(layerKey, file);
+          });
+          zone.addEventListener('click', () => pickFile((file) => handleEnvFile(layerKey, file)));
+        });
+        container.querySelectorAll('.layer-item').forEach((item) => {
+          const handle = item.querySelector('[data-layer-handle]');
+          if (handle) {
+            handle.draggable = true;
+            handle.addEventListener('dragstart', (e) => {
+              item.classList.add('dragging');
+              e.dataTransfer.setData('text/plain', item.dataset.layer);
+            });
+            handle.addEventListener('dragend', () => item.classList.remove('dragging'));
+          }
+          item.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const rect = item.getBoundingClientRect();
+            const offsetY = e.clientY - rect.top;
+            const before = offsetY < rect.height / 2;
+            item.classList.toggle('drop-indicator-before', before);
+            item.classList.toggle('drop-indicator-after', !before);
+          });
+          item.addEventListener('dragleave', () => {
+            item.classList.remove('drop-indicator-before', 'drop-indicator-after');
+          });
+          item.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const from = e.dataTransfer.getData('text/plain');
+            const to = item.dataset.layer;
+            if (!from || !to || from === to) return;
+            const rect = item.getBoundingClientRect();
+            const before = (e.clientY - rect.top) < rect.height / 2;
+            const order = env.layerOrder.filter((k) => k !== from);
+            const toIndex = order.indexOf(to);
+            const insertIndex = before ? toIndex : toIndex + 1;
+            order.splice(insertIndex, 0, from);
+            env.layerOrder = order;
+            item.classList.remove('drop-indicator-before', 'drop-indicator-after');
+            renderLayerManager(env);
+            rebuildPreview();
+          });
+        });
+      }
+
+      function addNewCharacter() {
+        const newId = prompt('New character id (e.g. custom-hero)');
+        if (!newId) return;
+        const newLabel = prompt('Display label', newId) || newId;
+        const template = {
+          isNew: true,
+          id: newId,
+          avatarIndex: state.characters.length + state.newCharacters.length,
+          label: newLabel,
+          order: state.characters.length + state.newCharacters.length,
+          defaultEnvironmentId: state.environments[0]?.id || 'white-city',
+          profileFlag: '',
+          marketplaceUrl: '',
+          music: { path: '' },
+          thumbnail: { path: '' },
+          spritesheets: {
+            idle: { path: '', frameWidth: 80, frameHeight: 80 },
+            running: { path: '', frameWidth: 80, frameHeight: 80 }
+          },
+          animations: {
+            idle: { frameRate: 10, repeat: -1, endFrame: 3 },
+            running: { frameRate: 10, repeat: -1, endFrame: 5 }
+          },
+          body: {
+            idle: { width: 80, height: 80, offsetX: 0, offsetY: 0 },
+            running: { width: 80, height: 80, offsetX: 0, offsetY: 0 }
+          },
+          airFrame: 0,
+          obstacles: [],
+          obstacleWeights: [],
+          assetTargets: {
+            idle: `/assets/characters/${newId}/idle.png`,
+            running: `/assets/characters/${newId}/running.png`,
+            thumbnail: `/assets/characters/${newId}/thumbnail.png`,
+            music: `/assets/music/${newId}.ogg`
+          },
+          assetFiles: {}
+        };
+        state.newCharacters.push(template);
+        populateSelects();
+        setCharacter(template);
+      }
+
+      function addNewEnvironment() {
+        const newId = prompt('New environment id (e.g. neon-city)');
+        if (!newId) return;
+        const newLabel = prompt('Display label', newId) || newId;
+        const template = {
+          isNew: true,
+          id: newId,
+          label: newLabel,
+          layers: {
+            sky: '',
+            cloud: '',
+            city: '',
+            ground: ''
+          },
+          layerOrder: ['sky', 'cloud', 'city', 'city1', 'city2', 'ground'],
+          assetTargets: {
+            ground: `/assets/environments/${newId}/layers/ground.png`,
+            city: `/assets/environments/${newId}/layers/city.png`,
+            city1: `/assets/environments/${newId}/layers/city1.png`,
+            city2: `/assets/environments/${newId}/layers/city2.png`,
+            sky: `/assets/environments/${newId}/layers/sky.png`,
+            cloud: `/assets/environments/${newId}/layers/cloud.png`
+          },
+          assetFiles: {}
+        };
+        state.newEnvironments.push(template);
+        populateSelects();
+        setEnvironment(template);
+      }
+
+      function rebuildPreview() {
+        if (!state.selectedChar) return;
+        if (state.game) {
+          state.game.destroy(true);
+          state.game = null;
+          state.scene = null;
+        }
+        const previewEl = document.getElementById('preview');
+        previewEl.innerHTML = '';
+
+        const config = {
+          type: Phaser.AUTO,
+          parent: 'preview',
+          width: PREVIEW_WIDTH,
+          height: PREVIEW_HEIGHT,
+          backgroundColor: '#0b1022',
+          transparent: false,
+          pixelArt: true,
+          physics: {
+            default: 'arcade',
+            arcade: { gravity: { y: 0 }, debug: false }
+          },
+          scene: {
+            preload: preloadScene,
+            create: createScene,
+            update: updateScene
+          }
+        };
+        state.game = new Phaser.Game(config);
+      }
+
+      function preloadScene() {
+        const char = state.selectedChar;
+        ['idle', 'running'].forEach((stateKey) => {
+          const sheet = char.spritesheets[stateKey];
+          if (sheet && sheet.path) {
+            this.load.spritesheet(
+              `${char.id}-${stateKey}`,
+              sheet.path,
+              {
+                frameWidth: sheet.frameWidth,
+                frameHeight: sheet.frameHeight
+              }
+            );
+          }
+        });
+
+        const env = state.selectedEnv;
+        if (env?.layers) {
+          ensureLayerOrder(env);
+          Object.entries(env.layers).forEach(([key, path]) => {
+            if (path) {
+              const renderPath = getEnvRenderPath(env, key);
+              this.load.image(`${env.id}-${key}`, renderPath);
+            }
+          });
+        }
+      }
+
+      function createScene() {
+        state.scene = this;
+        const { width, height } = this.scale;
+        const char = state.selectedChar;
+        const env = state.selectedEnv;
+
+        drawEnvironment(this, env, width, height);
+
+        // Animations
+        ['idle', 'running'].forEach((stateKey) => {
+          const animDef = char.animations[stateKey];
+          const sheet = char.spritesheets[stateKey];
+          if (!animDef || !sheet) return;
+          const key = `${char.id}-${stateKey}-anim`;
+          if (this.anims.exists(key)) return;
+          this.anims.create({
+            key,
+            frames: this.anims.generateFrameNumbers(`${char.id}-${stateKey}`, {
+              start: animDef.startFrame ?? 0,
+              end: animDef.endFrame
+            }),
+            frameRate: animDef.frameRate ?? 10,
+            repeat: animDef.repeat ?? -1
+          });
+        });
+
+        const runAnimKey = `${char.id}-running-anim`;
+        const runSheet = char.spritesheets.running;
+        const pose = (char.body && char.body.running) || (char.body && char.body.idle) || {
+          width: runSheet?.frameWidth ?? 80,
+          height: runSheet?.frameHeight ?? 80,
+          offsetX: 0,
+          offsetY: 0
+        };
+        const frameHeight = runSheet?.frameHeight ?? pose.height ?? 80;
+        const spriteY =
+          height - Math.max(0, (pose.offsetY ?? 0) + (pose.height ?? frameHeight) - frameHeight);
+
+        state.sprite = this.physics.add
+          .sprite(100, spriteY, `${char.id}-running`)
+          .setOrigin(0, 1)
+          .setCollideWorldBounds(false)
+          .setImmovable(true)
+          .setDepth(20);
+
+        state.sprite.play(runAnimKey, true);
+        applyBody(pose.width, pose.height, pose.offsetX, pose.offsetY);
+
+        // Hitbox overlay
+        state.hitboxOverlay = this.add.graphics();
+        state.hitboxOverlay.setDepth(30);
+        setEditing(state.isEditing);
+        redrawOverlay();
+      }
+
+      function drawEnvironment(scene, env, width, height) {
+        const layerOrder =
+          (env.layerOrder && env.layerOrder.length && env.layerOrder) ||
+          DEFAULT_LAYER_ORDER;
+        const defaultSky = 0x0f1a36;
+
+        layerOrder.forEach((layerKey, idx) => {
+          const resolvedPath = getEnvRenderPath(env, layerKey);
+          const hasTexture = scene.textures.exists(`${env.id}-${layerKey}`);
+          const depth = layerOrder.length - idx; // top of list = higher depth
+          if (!hasTexture) {
+            if (layerKey === 'sky' && idx === 0) {
+              scene.add.rectangle(0, 0, width, height, defaultSky).setOrigin(0, 0).setDepth(0);
+            }
+            return;
+          }
+
+          const img = scene.add.image(0, 0, `${env.id}-${layerKey}`);
+          if (layerKey === 'ground') {
+            img
+              .setOrigin(0, 1)
+              .setPosition(0, height)
+              .setDisplaySize(width, img.height)
+              .setDepth(depth);
+          } else {
+            img
+              .setOrigin(0, 0)
+              .setDisplaySize(width, height)
+              .setDepth(depth);
+          }
+          img.setScale(1);
+        });
+      }
+
+      function updateScene() {
+        if (state.hitboxOverlay) redrawOverlay();
+      }
+
+      function applyBody(width, height, offsetX, offsetY) {
+        const body = state.sprite.body;
+        const safeWidth = Math.max(2, width || 0);
+        const safeHeight = Math.max(2, height || 0);
+        body.setSize(safeWidth, safeHeight);
+        body.setOffset(offsetX || 0, offsetY || 0);
+      }
+
+      function getBodyInfo() {
+        if (!state.sprite || !state.sprite.body) {
+          return { x: 0, y: 0, width: 0, height: 0, offsetX: 0, offsetY: 0 };
+        }
+        const body = state.sprite.body;
+        return {
+          x: body.x,
+          y: body.y,
+          width: body.width,
+          height: body.height,
+          offsetX: body.offset.x,
+          offsetY: body.offset.y
+        };
+      }
+
+      function redrawOverlay() {
+        const body = getBodyInfo();
+        const g = state.hitboxOverlay;
+        g.clear();
+        g.lineStyle(2, 0xff4d4d, 0.9);
+        g.strokeRect(body.x, body.y, body.width, body.height);
+        g.fillStyle(0xff4d4d, 0.15);
+        g.fillRect(body.x, body.y, body.width, body.height);
+        if (state.handles.length) {
+          positionHandles(body);
+        }
+        document.getElementById('bodySize').value =
+          `${Math.round(body.width)} x ${Math.round(body.height)} @ ${Math.round(body.offsetX)}, ${Math.round(body.offsetY)}`;
+      }
+
+      function createHandles() {
+        destroyHandles();
+        const scene = state.scene;
+        const body = getBodyInfo();
+
+        const handleDefs = [
+          { key: 'move', size: 14, cursor: 'move', color: 0x38bdf8 },
+          { key: 'right', size: 10, cursor: 'ew-resize', color: 0xfacc15 },
+          { key: 'bottom', size: 10, cursor: 'ns-resize', color: 0xfacc15 },
+          { key: 'corner', size: 12, cursor: 'nwse-resize', color: 0xf97316 }
+        ];
+
+        state.handles = handleDefs.map((h) => {
+          const rect = scene.add.rectangle(0, 0, h.size, h.size, h.color ?? 0xfacc15, 0.9);
+          rect.setStrokeStyle(1, 0x111827, 0.9);
+          rect.setDepth(40);
+          rect.handleKey = h.key;
+          rect.handleCursor = h.cursor;
+          return rect;
+        });
+        positionHandles(body);
+        setHandlesInteractive(state.isEditing);
+      }
+
+      function destroyHandles() {
+        state.handles.forEach((h) => h.destroy());
+        state.handles = [];
+      }
+
+      function setHandlesInteractive(enabled) {
+        if (!state.scene) return;
+        state.handles.forEach((rect) => {
+          rect.removeAllListeners();
+          rect.disableInteractive();
+          rect.setVisible(enabled);
+          if (enabled) {
+            rect.setInteractive({ draggable: true, cursor: rect.handleCursor });
+            state.scene.input.setDraggable(rect);
+            rect.on('dragstart', (pointer) => {
+              state.dragContext = {
+                startPointer: { x: pointer.worldX, y: pointer.worldY },
+                startBody: getBodyInfo(),
+                handle: rect.handleKey
+              };
+            });
+            rect.on('drag', (pointer) => onHandleDrag(pointer, rect.handleKey));
+            rect.on('dragend', () => {
+              state.dragContext = null;
+            });
+          }
+        });
+      }
+
+      function positionHandles(body) {
+        const { x, y, width, height } = body;
+        state.handles.forEach((handle) => {
+          switch (handle.handleKey) {
+            case 'move':
+              handle.setPosition(x + width / 2, y + height / 2);
+              break;
+            case 'right':
+              handle.setPosition(x + width, y + height / 2);
+              break;
+            case 'bottom':
+              handle.setPosition(x + width / 2, y + height);
+              break;
+            case 'corner':
+              handle.setPosition(x + width, y + height);
+              break;
+          }
+        });
+      }
+
+      function onHandleDrag(pointer, key) {
+        if (!state.isEditing) return;
+        if (!state.dragContext) return;
+        const ctx = state.dragContext;
+        const dx = pointer.worldX - ctx.startPointer.x;
+        const dy = pointer.worldY - ctx.startPointer.y;
+
+        let { width, height, offsetX, offsetY } = ctx.startBody;
+
+        if (key === 'move') {
+          offsetX = ctx.startBody.offsetX + dx;
+          offsetY = ctx.startBody.offsetY + dy;
+        } else if (key === 'right') {
+          width = Math.max(4, ctx.startBody.width + dx);
+        } else if (key === 'bottom') {
+          height = Math.max(4, ctx.startBody.height + dy);
+        } else if (key === 'corner') {
+          width = Math.max(4, ctx.startBody.width + dx);
+          height = Math.max(4, ctx.startBody.height + dy);
+        }
+
+        applyBody(width, height, offsetX, offsetY);
+        redrawOverlay();
+      }
+
+      function setEditing(enabled) {
+        state.isEditing = enabled;
+        if (!state.scene) return;
+        if (enabled) {
+          if (!state.handles.length) {
+            createHandles();
+          }
+          setHandlesInteractive(true);
+        } else {
+          setHandlesInteractive(false);
+        }
+        const toggleBtn = document.getElementById('toggleEdit');
+        if (toggleBtn) {
+          toggleBtn.textContent = enabled ? 'Disable hitbox edit' : 'Enable hitbox edit';
+        }
+      }
+
+      // Export/import hooks
+      document.getElementById('importConfig').onclick = async () => {
+        const picker = document.createElement('input');
+        picker.type = 'file';
+        picker.accept = '.json,application/json';
+        picker.onchange = async () => {
+          const file = picker.files?.[0];
+          if (!file) return;
+          const text = await file.text();
+          try {
+            const parsed = JSON.parse(text);
+            alert('Imported JSON. Wiring into live data is TODO.');
+          } catch (e) {
+            alert('Invalid JSON file');
+          }
+        };
+        picker.click();
+      };
+
+      document.getElementById('exportConfig').onclick = () => {
+        const body = getBodyInfo();
+        const payload = {
+          characterId: state.selectedChar?.id,
+          environmentId: state.selectedEnv?.id,
+          body: {
+            width: Math.round(body.width),
+            height: Math.round(body.height),
+            offsetX: Math.round(body.offsetX),
+            offsetY: Math.round(body.offsetY)
+          }
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], {
+          type: 'application/json'
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'editor-export.json';
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      document.getElementById('toggleEdit').onclick = () => {
+        setEditing(!state.isEditing);
+      };
+
+      // Dropzones
+      function bindDropzones() {
+        document.querySelectorAll('#charUploads .dropzone').forEach((el) => {
+          const asset = el.dataset.asset;
+          attachDrop(el, (file) => handleCharFile(asset, file));
+        });
+        document.querySelectorAll('[data-change]').forEach((btn) => {
+          const asset = btn.dataset.change;
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            pickFile((file) => handleCharFile(asset, file));
+          });
+        });
+        document.querySelectorAll('[data-layer-change]').forEach((btn) => {
+          const layer = btn.dataset['layerChange'];
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            pickFile((file) => handleEnvFile(layer, file));
+          });
+        });
+      }
+
+      function attachDrop(el, onFile) {
+        el.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          el.style.borderColor = '#9fb4ff';
+        });
+        el.addEventListener('dragleave', () => {
+          el.style.borderColor = 'rgba(255,255,255,0.25)';
+        });
+        el.addEventListener('drop', (e) => {
+          e.preventDefault();
+          el.style.borderColor = 'rgba(255,255,255,0.25)';
+          const file = e.dataTransfer.files?.[0];
+          if (file) onFile(file);
+        });
+        el.addEventListener('click', () => {
+          pickFile(onFile);
+        });
+      }
+
+      function pickFile(onFile) {
+        const picker = document.createElement('input');
+        picker.type = 'file';
+        picker.onchange = () => {
+          const file = picker.files?.[0];
+          if (file) onFile(file);
+        };
+        picker.click();
+      }
+
+      function handleCharFile(kind, file) {
+        if (!state.selectedChar) return;
+        const target =
+          state.selectedChar.assetTargets?.[kind] ??
+          `/assets/characters/${state.selectedChar.id}/${kind}.png`;
+        const previewUrl = URL.createObjectURL(file);
+        if (!state.selectedChar.assetFiles) state.selectedChar.assetFiles = {};
+        state.selectedChar.assetFiles[kind] = { file, target, previewUrl };
+        if (kind === 'idle' || kind === 'running') {
+          state.selectedChar.spritesheets[kind].path = previewUrl;
+        } else if (kind === 'thumbnail') {
+          state.selectedChar.thumbnail.path = previewUrl;
+        } else if (kind === 'music') {
+          state.selectedChar.music.path = previewUrl;
+        }
+        updateAssetUI(state.selectedChar);
+        rebuildPreview();
+      }
+
+      function handleEnvFile(layerKey, file) {
+        if (!state.selectedEnv) return;
+        ensureLayerOrder(state.selectedEnv);
+        if (!state.selectedEnv.layerOrder.includes(layerKey)) {
+          state.selectedEnv.layerOrder.push(layerKey);
+        }
+        const target =
+          state.selectedEnv.assetTargets?.[layerKey] ??
+          `/assets/environments/${state.selectedEnv.id}/layers/${layerKey}.png`;
+        const previewUrl = URL.createObjectURL(file);
+        if (!state.selectedEnv.assetFiles) state.selectedEnv.assetFiles = {};
+        state.selectedEnv.assetFiles[layerKey] = { file, target, previewUrl };
+        if (!state.selectedEnv.layers) state.selectedEnv.layers = {};
+        state.selectedEnv.layers[layerKey] = previewUrl;
+        renderLayerManager(state.selectedEnv);
+        rebuildPreview();
+      }
+
+      function updateAssetUI(char) {
+        const idlePath = getCharTargetPath(char, 'idle');
+        const runPath = getCharTargetPath(char, 'running');
+        const thumbPath = getCharTargetPath(char, 'thumbnail');
+        const musicPath = getCharTargetPath(char, 'music');
+        document.getElementById('idlePath').textContent = idlePath || 'No asset yet';
+        document.getElementById('runPath').textContent = runPath || 'No asset yet';
+        document.getElementById('thumbPath').textContent = thumbPath || 'No asset yet';
+        document.getElementById('musicPath').textContent = musicPath || 'No asset yet';
+        document.getElementById('idlePreview').src = idlePath || '';
+        document.getElementById('runPreview').src = runPath || '';
+        document.getElementById('thumbPreview').src = thumbPath || '';
+        document.getElementById('musicPreview').textContent = musicPath ? 'Loaded' : 'No audio';
+      }
+
+      function updateEnvAssetUI(env) {
+        renderLayerManager(env);
+      }
+
+      function getCharTargetPath(char, kind) {
+        return (
+          char.assetFiles?.[kind]?.target ||
+          char.assetTargets?.[kind] ||
+          (kind === 'thumbnail' ? char.thumbnail?.path : kind === 'music' ? char.music?.path : char.spritesheets?.[kind]?.path) ||
+          ''
+        );
+      }
+
+      function getEnvTargetPath(env, layerKey) {
+        return env.assetFiles?.[layerKey]?.target || env.assetTargets?.[layerKey] || env.layers?.[layerKey] || '';
+      }
+
+      function getEnvRenderPath(env, layerKey) {
+        return env.assetFiles?.[layerKey]?.previewUrl || env.layers?.[layerKey] || env.assetTargets?.[layerKey] || '';
+      }
+
+      // Export bundle with manifest + assets
+      document.getElementById('exportBundle').onclick = async () => {
+        const manifest = buildManifest();
+        const zip = new JSZip();
+        zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+        await addAssetsToZip(zip);
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `editor-bundle-${Date.now()}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      function buildManifest() {
+        const characters = state.newCharacters.map((c) => {
+          const copy = JSON.parse(JSON.stringify(c));
+          copy.spritesheets.idle.path = getCharTargetPath(c, 'idle');
+          copy.spritesheets.running.path = getCharTargetPath(c, 'running');
+          copy.thumbnail.path = getCharTargetPath(c, 'thumbnail');
+          copy.music.path = getCharTargetPath(c, 'music');
+          delete copy.assetFiles;
+          delete copy.assetTargets;
+          return copy;
+        });
+        const environments = state.newEnvironments.map((e) => {
+          const copy = JSON.parse(JSON.stringify(e));
+          const layers = {};
+          ensureLayerOrder(e);
+          e.layerOrder.forEach((k) => {
+            layers[k] = getEnvTargetPath(e, k) || '';
+          });
+          copy.layers = layers;
+          copy.layerOrder = [...e.layerOrder];
+          delete copy.assetFiles;
+          delete copy.assetTargets;
+          return copy;
+        });
+        return {
+          packageId: `bundle-${Date.now()}`,
+          submittedAt: new Date().toISOString(),
+          author: 'editor-user',
+          characters,
+          environments,
+          notes: 'Generated from test_editor prototype'
+        };
+      }
+
+      document.getElementById('addLayerBtn').onclick = () => {
+        const env = state.selectedEnv;
+        if (!env) return;
+        const name = prompt('Layer name (e.g. ground, sky, city3)');
+        if (!name) return;
+        const layerKey = name.trim();
+        if (!env.layers) env.layers = {};
+        if (!env.assetTargets) env.assetTargets = {};
+        if (!env.layerOrder) env.layerOrder = [];
+        env.layers[layerKey] = env.layers[layerKey] || '';
+        env.assetTargets[layerKey] =
+          env.assetTargets[layerKey] || `/assets/environments/${env.id}/layers/${layerKey}.png`;
+        if (!env.layerOrder.includes(layerKey)) env.layerOrder.push(layerKey);
+        renderLayerManager(env);
+      };
+
+      async function addAssetsToZip(zip) {
+        const addFile = async (path, file) => {
+          const data = await file.arrayBuffer();
+          zip.file(path.replace(/^\//, ''), data);
+        };
+        for (const char of state.newCharacters) {
+          const files = char.assetFiles || {};
+          for (const key of Object.keys(files)) {
+            const { file, target } = files[key];
+            await addFile(target, file);
+          }
+        }
+        for (const env of state.newEnvironments) {
+          const files = env.assetFiles || {};
+          for (const key of Object.keys(files)) {
+            const { file, target } = files[key];
+            await addFile(target, file);
+          }
+        }
+      }
+
+      bindDropzones();
+      bootstrapData();
+    </script>
+  </body>
+</html>

@@ -544,46 +544,20 @@ class PlayScene extends Phaser.Scene {
 
   setupOrientationCheck() {
     this.updateVisibility = () => {
-      const isLandscape = window.matchMedia('(orientation: landscape)').matches;
       const { width, height } = this.scale;
 
-      if (isMobile || isTablet) {
-        if (isLandscape) {
-          this.game.canvas.style.display = 'block';
-          // Resize game to fit landscape
-          this.scale.resize(width, height);
-          // Update camera and game elements
-          this.cameras.main.setSize(width, height);
-          // Resume game if it was paused
-          if (this.scene.isPaused()) {
-            this.scene.resume();
-          }
-        } else {
-          this.game.canvas.style.display = 'none';
-          // Pause game when in portrait
-          this.scene.pause();
-        }
-      } else {
-        this.game.canvas.style.display = 'block';
-        this.scale.resize(width, height);
-        this.cameras.main.setSize(width, height);
-      }
+      // Always keep the game visible; previously we hid and paused on portrait,
+      // which broke play inside portrait-only webviews (e.g. xPortal).
+      this.game.canvas.style.display = 'block';
+      this.scale.resize(width, height);
+      this.cameras.main.setSize(width, height);
     };
 
     // Initial check
     this.updateVisibility();
 
     // Listen for orientation changes
-    window.addEventListener('orientationchange', () => {
-      // Small delay to ensure proper orientation detection
-      setTimeout(() => {
-        if (this.updateVisibility) {
-          this.updateVisibility();
-        }
-      }, 100);
-    });
-
-    // Listen for window resize
+    window.addEventListener('orientationchange', this.updateVisibility);
     window.addEventListener('resize', this.updateVisibility);
   }
 
