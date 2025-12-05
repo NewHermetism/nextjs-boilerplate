@@ -109,6 +109,31 @@ export default class ObstacleManager {
     return this.obstacles;
   }
 
+  private getObstacleTextureKey(type: string): string {
+    // Animated enemies that borrow character sprite sheets
+    const characterEnemy: Partial<Record<string, CharacterId>> = {
+      'enemy-boss': 'mini-boss',
+      'enemy-white': 'white-pijama',
+      'enemy-blue': 'blue-victor'
+    };
+
+    const characterId = characterEnemy[type];
+    if (characterId) {
+      const character = getCharacterById(characterId);
+      if (character) {
+        return character.animations.idle.sheet.key;
+      }
+    }
+
+    // Fireball reuses the "energy" spritesheet
+    if (type === 'enemy-fireball') {
+      return 'energy';
+    }
+
+    // Default: strip the prefix for enemy-* or use the raw type key
+    return type.startsWith('enemy-') ? type.replace('enemy-', '') : type;
+  }
+
   private initAnims() {
     const animConfigs = [
       { key: 'enemy-fireball', frames: 'energy', end: 3, rate: 6 },
@@ -185,8 +210,6 @@ export default class ObstacleManager {
         width + distance,
         height - this.getObstacleYPosition(obstacleType)
       );
-
-      this.configureObstaclePhysics(obstacle, obstacleType);
       return obstacle;
     } catch (error) {
       console.error('Error placing obstacle:', error);
@@ -198,8 +221,9 @@ export default class ObstacleManager {
     const children = this.obstacles.getChildren();
     for (let i = children.length - 1; i >= 0; i--) {
       const sprite = children[i] as Phaser.Physics.Arcade.Sprite;
-      if (sprite.x + sprite.width < 0 || !sprite.active) {
-        this.obstacles.killAndHide(sprite);
+      const isOffscreen = sprite.x + sprite.width < -50;
+      if (isOffscreen || !sprite.active || !sprite.body?.enable) {
+        this.obstacles.remove(sprite, true, true);
       }
     }
   }
@@ -238,7 +262,7 @@ export default class ObstacleManager {
     x: number,
     y: number
   ): Phaser.Physics.Arcade.Sprite {
-    const texture = type.replace('enemy-', '');
+    const texture = this.getObstacleTextureKey(type);
     const obstacle = this.obstacles
       .create(x, y, texture)
       .setOrigin(0, 1) // Set origin to bottom-left
