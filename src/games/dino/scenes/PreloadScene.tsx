@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CHARACTERS } from '../config/characters.config';
 import { ENVIRONMENTS } from '../config/environments.config';
 import { OBSTACLE_ASSETS } from '../config/obstacles.config';
+import { POWERUPS } from '../config/powerups.config';
 
 class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -84,6 +85,10 @@ class PreloadScene extends Phaser.Scene {
     this.load.image('play', '/assets/ui/buttons/play.png');
     this.load.image('store', '/assets/ui/buttons/store.png');
     this.load.image('leaderboard', '/assets/ui/buttons/leaderboard.png');
+
+    POWERUPS.forEach((powerup) => {
+      this.load.image(powerup.icon.key, powerup.icon.path);
+    });
 
     Object.values(OBSTACLE_ASSETS).forEach((asset) => {
       if (asset.type === 'spritesheet' && asset.frameWidth && asset.frameHeight) {

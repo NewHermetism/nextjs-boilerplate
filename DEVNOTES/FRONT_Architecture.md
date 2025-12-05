@@ -103,3 +103,18 @@
   would be (1) reviewing the backend event contract for sendVDashEvent to understand
   how scores get validated, or (2) consolidating the dual socket connections if you
   plan to share more state between React and Phaser.
+
+  Recent updates
+
+  - Added /editor route to surface the existing prototype editor inside the React
+  shell via an iframe pointed at the static HTML (src/pages/Editor/index.tsx:1-17,
+  src/routes/routes.ts:1-20, src/localConstants/routes/routeNames.enums.ts:1-6).
+  The raw editor HTML is copied into the build as public/editor/index.html so Vite
+  can serve it directly (test_editor/index.html → public/editor/index.html).
+  - Tweaked the /editor iframe container to use full available width with a tall
+  viewport so the embedded canvas renders horizontally instead of being cramped
+  (src/pages/Editor/index.tsx:1-17).
+  - Added AccessGuard to restrict access (outside of test mode) to a single wallet
+  address, showing “USER WITHOUT ACESS” for others. Guard lives in the main layout
+  so it applies to all authenticated routes after login
+  (src/components/AccessGuard/AccessGuard.tsx:1-36, src/components/Layout/Layout.tsx:1-32).

@@ -12,6 +12,7 @@ import { GAME_SETTINGS, SOUND_CONFIG } from './Constants';
 import SocketHandler from '../helpers/SocketHandler';
 import { isTablet, isMobile } from 'react-device-detect';
 import type { WalletProfile } from 'hooks/useGetProfile';
+import ShopMenu from './ShopMenu';
 import {
   type CharacterConfig,
   type CharacterId,
@@ -19,6 +20,7 @@ import {
   getCharacterById,
   getDefaultCharacter
 } from '../config/characters.config';
+import type { InventoryEntry } from '../config/powerups.config';
 import type { EnvironmentId } from '../config/environments.config';
 
 class PlayScene extends Phaser.Scene {
@@ -82,10 +84,12 @@ class PlayScene extends Phaser.Scene {
 
   // External components
   private characterModal!: CharacterModal;
+  private shopMenu!: ShopMenu;
   private menu!: Menu;
   private activeCharacterConfig: CharacterConfig = getDefaultCharacter();
   public selectedEnvironmentId?: EnvironmentId;
   private isEnvironmentPinned = false;
+  private consumableInventory: InventoryEntry[] = [];
 
   public get selectedCharacterId(): CharacterId {
     return this.activeCharacterConfig.id as CharacterId;
@@ -185,6 +189,14 @@ class PlayScene extends Phaser.Scene {
     this.characterModal = new CharacterModal(this);
     this.characterModal.hide();
 
+    this.shopMenu = new ShopMenu(this, {
+      onClose: () => {
+        this.menu.show();
+      },
+      title: 'Store'
+    });
+    this.shopMenu.hide();
+
     // Initialize menu callback
     const handleShowAvatarModal = () => {
       if (!this.checkLeadearboardVisibility()) {
@@ -241,6 +253,16 @@ class PlayScene extends Phaser.Scene {
       }
     };
 
+    const handleShowStore = () => {
+      this.scoreManager.stopScoring();
+      this.physics.pause();
+      this.isGameRunning = false;
+      this.anims.pauseAll();
+      this.startBackgroundMusic('menu_music');
+      this.shopMenu.setInventory(this.consumableInventory);
+      this.shopMenu.show();
+    };
+
     const handleRestartMenu = () => {
       if (!this.menu.visible && !this.checkLeadearboardVisibility()) {
         this.SocketHandler.startGameEvent();
@@ -255,6 +277,7 @@ class PlayScene extends Phaser.Scene {
       0,
       handleShowAvatarModal,
       handleShowLeadearboard,
+      handleShowStore,
       handlePlayMenu
     );
 
@@ -269,7 +292,9 @@ class PlayScene extends Phaser.Scene {
     this.inputManager = new InputManager(
       this,
       () => {
-        if (!this.menu.visible && this.isGameRunning) {
+        const isModalOpen =
+          this.menu.visible || this.shopMenu.visible || this.characterModal.visible;
+        if (!isModalOpen && this.isGameRunning) {
           this.dinoCharacter.jump();
         }
       },
@@ -629,6 +654,7 @@ class PlayScene extends Phaser.Scene {
   }
 
   private handleBackButton() {
+    this.shopMenu.hide();
     this.uiManager.showMenu();
     this.scoreManager.stopScoring();
     this.physics.pause();

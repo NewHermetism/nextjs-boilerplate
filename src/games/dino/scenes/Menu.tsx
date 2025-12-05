@@ -11,6 +11,7 @@ class Menu extends Phaser.GameObjects.Container {
   private musicButton: Phaser.GameObjects.Image;
   private onAvatarSelect: () => void;
   private onLeaderBoardSelect: () => void;
+  private onStoreSelect: () => void;
   private onPlaySelect: () => void;
   private isMusicOn: boolean = true;
 
@@ -20,6 +21,7 @@ class Menu extends Phaser.GameObjects.Container {
     y: number,
     onAvatarSelect: () => void,
     onLeaderBoardSelect: () => void,
+    onStoreSelect: () => void,
     onPlaySelect: () => void
   ) {
     super(scene, x, y);
@@ -29,6 +31,7 @@ class Menu extends Phaser.GameObjects.Container {
 
     this.onAvatarSelect = onAvatarSelect;
     this.onLeaderBoardSelect = onLeaderBoardSelect;
+    this.onStoreSelect = onStoreSelect;
     this.onPlaySelect = onPlaySelect;
 
     // Background
@@ -135,6 +138,10 @@ class Menu extends Phaser.GameObjects.Container {
 
     this.avatarButton.on('pointerdown', () => {
       this.onAvatarSelect();
+    });
+
+    this.storeButton.on('pointerdown', () => {
+      this.onStoreSelect();
     });
 
     this.musicButton.on('pointerdown', () => {

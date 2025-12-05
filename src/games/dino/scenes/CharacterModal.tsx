@@ -83,8 +83,8 @@ class CharacterModal extends Phaser.GameObjects.Container {
 
   private background: Phaser.GameObjects.Graphics;
   private closeButton: Phaser.GameObjects.Text;
-  private confirmButton: Phaser.GameObjects.Graphics;
-  private confirmText: Phaser.GameObjects.Text;
+  private confirmButton!: Phaser.GameObjects.Graphics;
+  private confirmText!: Phaser.GameObjects.Text;
   private characterCards: CharacterCardEntry[] = [];
   private environmentCards: EnvironmentCardEntry[] = [];
   private characterSection!: Phaser.GameObjects.Container;
