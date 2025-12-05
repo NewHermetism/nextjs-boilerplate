@@ -12,6 +12,11 @@ export const AccessGuard = ({ children }: PropsWithChildren) => {
   const isLoggedIn = useGetIsLoggedIn();
   const { pathname } = useLocation();
 
+  // Guard only applies to the editor route; everything else should pass through.
+  if (!pathname.startsWith(RouteNamesEnum.editor)) {
+    return <>{children}</>;
+  }
+
   if (isTestModeEnabled()) {
     return <>{children}</>;
   }

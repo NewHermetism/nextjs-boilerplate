@@ -115,6 +115,6 @@
   viewport so the embedded canvas renders horizontally instead of being cramped
   (src/pages/Editor/index.tsx:1-17).
   - Added AccessGuard to restrict the /editor route (outside of test mode) to a
-  single wallet address, showing “USER WITHOUT ACESS” for others. Guard is wrapped
-  only around the editor page so the rest of the app stays open
-  (src/components/AccessGuard/AccessGuard.tsx:1-36, src/pages/Editor/index.tsx:1-28).
+  single wallet address, showing “USER WITHOUT ACESS” for others. Guard checks the
+  pathname so it only activates on /editor and never affects the game or other pages
+  (src/components/AccessGuard/AccessGuard.tsx:1-42, src/pages/Editor/index.tsx:1-28).
