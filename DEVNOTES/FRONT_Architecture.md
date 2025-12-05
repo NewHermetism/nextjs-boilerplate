@@ -114,7 +114,7 @@
   - Tweaked the /editor iframe container to use full available width with a tall
   viewport so the embedded canvas renders horizontally instead of being cramped
   (src/pages/Editor/index.tsx:1-17).
-  - Added AccessGuard to restrict access (outside of test mode) to a single wallet
-  address, showing “USER WITHOUT ACESS” for others. Guard lives in the main layout
-  so it applies to all authenticated routes after login
-  (src/components/AccessGuard/AccessGuard.tsx:1-36, src/components/Layout/Layout.tsx:1-32).
+  - Added AccessGuard to restrict the /editor route (outside of test mode) to a
+  single wallet address, showing “USER WITHOUT ACESS” for others. Guard is wrapped
+  only around the editor page so the rest of the app stays open
+  (src/components/AccessGuard/AccessGuard.tsx:1-36, src/pages/Editor/index.tsx:1-28).

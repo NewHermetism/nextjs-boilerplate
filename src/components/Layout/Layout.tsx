@@ -1,7 +1,6 @@
 import type { PropsWithChildren } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AuthenticatedRoutesWrapper } from 'components/sdkDappComponents';
-import { AccessGuard } from 'components';
 import { RouteNamesEnum } from 'localConstants/routes';
 import { routes } from 'routes/routes';
 import { Footer } from './Footer';
@@ -17,14 +16,12 @@ export const Layout = ({ children }: PropsWithChildren) => {
       >
         <Header />
         <main className='flex flex-col flex-1 justify-center items-center p-3 lg:p-6 lg:mx-9 lg:pt-0'>
-          <AccessGuard>
-            <AuthenticatedRoutesWrapper
-              routes={routes}
-              unlockRoute={`${RouteNamesEnum.unlock}${search}`}
-            >
-              {children}
-            </AuthenticatedRoutesWrapper>
-          </AccessGuard>
+          <AuthenticatedRoutesWrapper
+            routes={routes}
+            unlockRoute={`${RouteNamesEnum.unlock}${search}`}
+          >
+            {children}
+          </AuthenticatedRoutesWrapper>
         </main>
         <Footer />
       </div>
