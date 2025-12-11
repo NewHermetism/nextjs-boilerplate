@@ -5,7 +5,10 @@ import { RouteNamesEnum } from 'localConstants';
 import { useGetAccountInfo, useGetIsLoggedIn } from 'hooks';
 import { isTestModeEnabled } from 'utils/isTestModeEnabled';
 
-const ALLOWED_ADDRESS = 'erd13n03l3nndty29uqrrzdvz9kx7065dc42qqc4z9ft6fjan6932x7svate2d';
+const ALLOWED_ADDRESSES = [
+  'erd13n03l3nndty29uqrrzdvz9kx7065dc42qqc4z9ft6fjan6932x7svate2d',
+  'erd1pkl5nqs9v0nma4ccczw0y3t44cqfq6eltht994p48rm8y3lzmyeqqxcsj9'
+];
 
 export const AccessGuard = ({ children }: PropsWithChildren) => {
   const { address } = useGetAccountInfo();
@@ -38,7 +41,7 @@ export const AccessGuard = ({ children }: PropsWithChildren) => {
   }
 
   const normalized = (address ?? '').trim().toLowerCase();
-  const isAllowed = normalized === ALLOWED_ADDRESS;
+  const isAllowed = ALLOWED_ADDRESSES.includes(normalized);
 
   if (isAllowed) {
     return <>{children}</>;
