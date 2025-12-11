@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <title>Editor Prototype</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--EDITOR_DATA_INJECT-->
     <style>
       :root {
         color-scheme: dark;
@@ -531,6 +532,15 @@
 
       async function bootstrapData() {
         try {
+          const injected = window.__EDITOR_DATA__ || window.parent?.__EDITOR_DATA__;
+          if (injected?.characters?.length && injected?.environments?.length) {
+            state.characters = injected.characters;
+            state.environments = injected.environments;
+            populateSelects();
+            pickDefaults();
+            return;
+          }
+
           const [characters, environments] = await Promise.all([
             loadJson('../src/games/dino/config/data/characters.json'),
             loadJson('../src/games/dino/config/data/environments.json')

@@ -12,18 +12,29 @@ export const AccessGuard = ({ children }: PropsWithChildren) => {
   const isLoggedIn = useGetIsLoggedIn();
   const { pathname } = useLocation();
 
+  const normalizeFlag = (value: unknown) =>
+    typeof value === 'string' && ['true', '1', 'yes', 'on'].includes(value.trim().toLowerCase());
+  const allowTestBypass = isTestModeEnabled() && normalizeFlag(import.meta.env.VITE_EDITOR_BYPASS);
+
+  const renderDenied = (message: string) => (
+    <div className='flex flex-col items-center justify-center w-full h-full py-16 px-4 text-center text-white gap-3'>
+      <div className='text-2xl font-bold tracking-wide'>USER WITHOUT ACCESS</div>
+      <div className='text-sm text-red-200/80 max-w-xl'>{message}</div>
+    </div>
+  );
+
   // Guard only applies to the editor route; everything else should pass through.
   if (!pathname.startsWith(RouteNamesEnum.editor)) {
     return <>{children}</>;
   }
 
-  if (isTestModeEnabled()) {
+  // Only bypass in test mode when explicitly allowed for the editor.
+  if (allowTestBypass) {
     return <>{children}</>;
   }
 
-  const isUnlockRoute = pathname === RouteNamesEnum.unlock;
-  if (!isLoggedIn || isUnlockRoute) {
-    return <>{children}</>;
+  if (!isLoggedIn) {
+    return renderDenied('Connect with the approved wallet address to open the editor.');
   }
 
   const normalized = (address ?? '').trim().toLowerCase();
@@ -33,12 +44,5 @@ export const AccessGuard = ({ children }: PropsWithChildren) => {
     return <>{children}</>;
   }
 
-  return (
-    <div className='flex flex-col items-center justify-center w-full h-full py-16 px-4 text-center text-white gap-3'>
-      <div className='text-2xl font-bold tracking-wide'>USER WITHOUT ACESS</div>
-      <div className='text-sm text-red-200/80 max-w-xl'>
-        The connected wallet is not permitted to access this application.
-      </div>
-    </div>
-  );
+  return renderDenied('The connected wallet is not permitted to access this application.');
 };
